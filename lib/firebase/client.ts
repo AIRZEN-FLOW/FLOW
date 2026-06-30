@@ -1,7 +1,10 @@
 // SDK Firebase CÔTÉ CLIENT (navigateur).
 // Utilise uniquement les clés publiques NEXT_PUBLIC_* (sans danger à exposer).
-// À utiliser dans les composants React pour l'authentification et la lecture/écriture
-// Firestore soumise aux règles de sécurité.
+//
+// Initialisation PARESSEUSE : on ne crée l'app/Auth/Firestore qu'au premier appel,
+// donc uniquement dans le navigateur (jamais pendant le rendu serveur / le build).
+// Cela évite l'erreur "auth/invalid-api-key" au prérendu et respecte le fait que
+// Firebase Auth n'a de sens que côté client.
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
@@ -15,9 +18,24 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// On réutilise l'app déjà initialisée si elle existe (évite les doublons en dev/HMR).
-const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+let appMemo: FirebaseApp | null = null;
+let authMemo: Auth | null = null;
+let dbMemo: Firestore | null = null;
 
-export const auth: Auth = getAuth(app);
-export const db: Firestore = getFirestore(app);
-export default app;
+function getFirebaseApp(): FirebaseApp {
+  if (appMemo) return appMemo;
+  appMemo = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  return appMemo;
+}
+
+/** Instance Firebase Auth (créée à la demande, côté navigateur). */
+export function getAuthClient(): Auth {
+  if (!authMemo) authMemo = getAuth(getFirebaseApp());
+  return authMemo;
+}
+
+/** Instance Firestore (créée à la demande, côté navigateur). */
+export function getDbClient(): Firestore {
+  if (!dbMemo) dbMemo = getFirestore(getFirebaseApp());
+  return dbMemo;
+}
