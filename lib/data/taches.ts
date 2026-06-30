@@ -7,7 +7,6 @@ import {
   deleteDoc,
   doc,
   getDocs,
-  orderBy,
   query,
   serverTimestamp,
   Timestamp,
@@ -52,13 +51,14 @@ export async function creerTache(
 
 export async function getTaches(uid: string): Promise<Tache[]> {
   const db = getDbClient();
-  const q = query(
-    collection(db, "taches"),
-    where("utilisateurId", "==", uid),
-    orderBy("creeLe", "desc"),
-  );
+  // Filtre par égalité seul (pas d'orderBy) → aucun index composite requis.
+  // Le tri (plus récentes d'abord) est fait côté client.
+  const q = query(collection(db, "taches"), where("utilisateurId", "==", uid));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Tache);
+  const taches = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Tache);
+  return taches.sort(
+    (a, b) => (b.creeLe?.toMillis() ?? 0) - (a.creeLe?.toMillis() ?? 0),
+  );
 }
 
 export async function majStatutTache(id: string, statut: StatutTache): Promise<void> {
