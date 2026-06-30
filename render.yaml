@@ -1,0 +1,43 @@
+# Configuration de déploiement Render (Blueprint) — AIR ZEN Flow
+# Render lit ce fichier pour construire et démarrer l'application.
+# Les variables marquées "sync: false" doivent être renseignées À LA MAIN dans le
+# tableau de bord Render (Environment) — elles ne sont jamais stockées dans Git.
+services:
+  - type: web
+    name: air-zen-flow
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    autoDeploy: true # redéploiement automatique à chaque push sur la branche suivie
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+
+      # --- Firebase, côté client (clés publiques) ---
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_APP_ID
+        sync: false
+
+      # --- Firebase, côté serveur (SECRET) ---
+      - key: FIREBASE_SERVICE_ACCOUNT_KEY
+        sync: false
+
+      # --- Google Calendar (Étape 8) ---
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+      # --- API Anthropic (Étape 6) ---
+      - key: ANTHROPIC_API_KEY
+        sync: false

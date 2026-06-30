@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/*
+  Charte graphique AIR ZEN Flow (voir 04-design-system.md)
+  Les couleurs sont déclarées ici comme "tokens" Tailwind v4.
+  On peut ensuite les utiliser comme des classes : bg-airzen-primary,
+  text-airzen-accent, border-q2, etc.
+*/
+@theme {
+  /* Couleurs de la marque AIR ZEN */
+  --color-airzen-primary: #596d85; /* Gris-bleu foncé — textes importants, boutons primaires */
+  --color-airzen-accent: #edc426; /* Jaune — call-to-action, mise en valeur */
+  --color-airzen-secondary: #76939d; /* Bleu-vert — éléments d'interface, bordures */
+  --color-airzen-neutral: #b3bec4; /* Gris clair — fonds de carte, textes secondaires */
+  --color-airzen-bg: #f5f7f8; /* Fond doux — fond d'écran général */
+
+  /* Couleurs des quadrants Eisenhower */
+  --color-q1: #c97064; /* Faire maintenant (terracotta doux) */
+  --color-q2: #76939d; /* Planifier (valorisé) */
+  --color-q3: #b3bec4; /* Déléguer / minimiser (discret) */
+  --color-q4: #d9d9d9; /* Éliminer / différer (en retrait) */
+
+  /* Police unique de la marque */
+  --font-sans: var(--font-montserrat);
+}
+
+body {
+  background: var(--color-airzen-bg);
+  color: var(--color-airzen-primary);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}

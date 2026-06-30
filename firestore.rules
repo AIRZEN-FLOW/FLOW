@@ -1,0 +1,54 @@
+rules_version = '2';
+
+// Règles de sécurité Firestore — AIR ZEN Flow
+// Principe : chaque document porte un champ `utilisateurId` ; une utilisatrice
+// ne peut lire/écrire QUE les documents qui lui appartiennent.
+// (Voir 03-specifications-techniques.md, §3 — sécurité non négociable.)
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Vrai si l'utilisateur est connecté et propriétaire du document existant.
+    function estProprietaire() {
+      return request.auth != null
+             && request.auth.uid == resource.data.utilisateurId;
+    }
+
+    // Vrai si, à la création, le document est rattaché à l'utilisateur connecté.
+    function creeParSoi() {
+      return request.auth != null
+             && request.auth.uid == request.resource.data.utilisateurId;
+    }
+
+    // Document de profil étendu : l'id du document == uid Firebase Auth.
+    match /utilisateurs/{utilisateurId} {
+      allow read, write: if request.auth != null
+                          && request.auth.uid == utilisateurId;
+    }
+
+    // Collections "métier" : rattachées via le champ utilisateurId.
+    match /taches/{tacheId} {
+      allow read, update, delete: if estProprietaire();
+      allow create: if creeParSoi();
+    }
+
+    match /projets/{projetId} {
+      allow read, update, delete: if estProprietaire();
+      allow create: if creeParSoi();
+    }
+
+    match /profilsEnergie/{profilId} {
+      allow read, update, delete: if estProprietaire();
+      allow create: if creeParSoi();
+    }
+
+    match /disponibilitesManuelles/{dispoId} {
+      allow read, update, delete: if estProprietaire();
+      allow create: if creeParSoi();
+    }
+
+    match /piecesJointes/{pieceId} {
+      allow read, update, delete: if estProprietaire();
+      allow create: if creeParSoi();
+    }
+  }
+}
