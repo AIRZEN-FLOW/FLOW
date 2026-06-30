@@ -12,6 +12,8 @@ import {
   majTache,
   supprimerTache,
 } from "@/lib/data/taches";
+import { calculerQuadrant } from "@/lib/eisenhower";
+import { tsEnDate } from "@/lib/format";
 
 export function useTaches() {
   const { user, utilisateur } = useAuth();
@@ -21,19 +23,34 @@ export function useTaches() {
 
   const seuilJours = utilisateur?.seuilUrgenceJours ?? 3;
 
+  // Recalcule le quadrant en fonction de la date du jour (l'urgence est relative
+  // au moment présent). Le quadrant stocké sert de cache ; l'affichage reste juste.
+  const rafraichirQuadrants = useCallback(
+    (list: Tache[]): Tache[] =>
+      list.map((t) => ({
+        ...t,
+        quadrantEisenhower: calculerQuadrant(
+          tsEnDate(t.dateEcheance),
+          t.niveauImportance,
+          seuilJours,
+        ),
+      })),
+    [seuilJours],
+  );
+
   const recharger = useCallback(async () => {
     if (!user) return;
     setChargement(true);
     setErreur(null);
     try {
-      setTaches(await getTaches(user.uid));
+      setTaches(rafraichirQuadrants(await getTaches(user.uid)));
     } catch (e) {
       console.error(e);
       setErreur("Impossible de charger les tâches.");
     } finally {
       setChargement(false);
     }
-  }, [user]);
+  }, [user, rafraichirQuadrants]);
 
   // Chargement initial : logique inline (avec annulation) pour ne pas déclencher
   // de setState synchrone dans l'effet.
@@ -45,7 +62,7 @@ export function useTaches() {
       setErreur(null);
       try {
         const data = await getTaches(user.uid);
-        if (actif) setTaches(data);
+        if (actif) setTaches(rafraichirQuadrants(data));
       } catch (e) {
         console.error(e);
         if (actif) setErreur("Impossible de charger les tâches.");
@@ -56,7 +73,7 @@ export function useTaches() {
     return () => {
       actif = false;
     };
-  }, [user]);
+  }, [user, rafraichirQuadrants]);
 
   const creer = useCallback(
     async (saisie: SaisieTache) => {
