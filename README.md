@@ -44,10 +44,14 @@ Toute la conception du projet est dans le dossier [`docs/`](./docs) :
 ## Avancement
 
 - [x] **Étape 1** — Squelette du projet (Next.js + charte AIR ZEN + structure Firebase)
-- [ ] **Étape 2** — Authentification
-- [ ] **Étape 3** — Créer et lister des tâches
-- [ ] **Étape 4** — Matching énergie / durée (fin du MVP)
-- [ ] Étapes 5+ — projets, IA, récurrence, Google Agenda, PWA complète
+- [x] **Étape 2** — Authentification (email/mot de passe + Google)
+- [x] **Étape 3** — Créer et lister des tâches (quadrant Eisenhower)
+- [x] **Étape 4** — Matching énergie / durée (fin du MVP)
+- [x] **Étape 5** — Projets et sous-tâches
+- [ ] Étape 6 — Découpage automatique par IA (API Anthropic)
+- [ ] Étape 7 — Récurrence
+- [ ] Étape 8 — Google Agenda (lecture seule)
+- [ ] Étape 9 — PWA complète
 
 ## Configuration (pour déployer)
 

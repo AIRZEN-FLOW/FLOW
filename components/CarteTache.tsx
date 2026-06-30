@@ -11,6 +11,7 @@ interface CarteTacheProps {
   tache: Tache;
   raison?: string; // "pourquoi maintenant" (suggestions)
   attenue?: boolean; // affichage en retrait (second plan / terminée)
+  projet?: { nom: string; couleur: string }; // pastille projet, si rattachée
   onTerminer?: (t: Tache) => void;
   onRouvrir?: (t: Tache) => void;
   onSupprimer?: (t: Tache) => void;
@@ -20,6 +21,7 @@ export function CarteTache({
   tache,
   raison,
   attenue = false,
+  projet,
   onTerminer,
   onRouvrir,
   onSupprimer,
@@ -47,6 +49,18 @@ export function CarteTache({
               énergie {libelleNiveau(tache.niveauEnergieRequis).toLowerCase()}
             </span>
             {echeance && <span>échéance {echeance}</span>}
+            {projet && (
+              <span
+                className="inline-flex items-center gap-1.5"
+                title={`Projet : ${projet.nom}`}
+              >
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: projet.couleur }}
+                />
+                {projet.nom}
+              </span>
+            )}
           </div>
           {raison && (
             <p className="mt-2 text-xs font-light text-airzen-secondary">{raison}</p>

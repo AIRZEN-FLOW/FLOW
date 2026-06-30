@@ -60,5 +60,13 @@ la tâche), et durée de la tâche.
 
 ## Où démarrer une nouvelle session
 
-État actuel : **Étape 1 (squelette) terminée.** Vérifier la dernière étape cochée dans
-`docs/05-plan-developpement.md` et continuer à partir de là.
+État actuel : **Étapes 1 à 5 terminées (MVP + projets/sous-tâches).** La prochaine étape
+est l'**Étape 6 — Découpage automatique par IA**. Vérifier la dernière étape cochée dans
+le README et continuer à partir de là.
+
+Architecture mise en place :
+- `lib/types.ts` (modèle), `lib/eisenhower.ts`, `lib/energie.ts`, `lib/matching.ts` (logique pure)
+- `lib/firebase/client.ts` (init paresseuse, navigateur uniquement), `lib/data/*` (CRUD Firestore)
+- `lib/hooks/*` (useTaches, useProjets, useEnergieMoment)
+- `components/AuthProvider.tsx` (contexte auth + profil), `RequireAuth`, `AppShell`
+- Écrans : `/login`, `/` (suggestions), `/taches`, `/projets`, `/parametres`

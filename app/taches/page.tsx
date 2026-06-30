@@ -1,27 +1,61 @@
 "use client";
 
-// Étape 3 — Le noyau : créer, lister, et terminer des tâches.
-import { useMemo, useState } from "react";
+// Étape 3 + 5 — Gestion des tâches : création, liste, quadrant, terminer,
+// rattachement à un projet, sous-tâches (tâche parente) et filtre par projet.
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
 import { FormulaireTache } from "@/components/FormulaireTache";
 import { CarteTache } from "@/components/CarteTache";
 import { useTaches } from "@/lib/hooks/useTaches";
-import type { SaisieTache } from "@/lib/types";
+import { useProjets } from "@/lib/hooks/useProjets";
+import type { SaisieTache, Tache } from "@/lib/types";
 
 function GestionTaches() {
   const { taches, chargement, erreur, creer, terminer, rouvrir, supprimer } = useTaches();
+  const { projets } = useProjets();
+  const searchParams = useSearchParams();
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   const [enregistrement, setEnregistrement] = useState(false);
   const [terminéesVisibles, setTerminéesVisibles] = useState(false);
+  const [filtreProjet, setFiltreProjet] = useState<string>(
+    searchParams.get("projet") ?? "tous",
+  );
 
-  const { actives, terminees } = useMemo(() => {
+  const projetParId = useMemo(
+    () => new Map(projets.map((p) => [p.id, p])),
+    [projets],
+  );
+
+  function correspondAuFiltre(t: Tache): boolean {
+    if (filtreProjet === "tous") return true;
+    if (filtreProjet === "sans") return !t.projetId;
+    return t.projetId === filtreProjet;
+  }
+
+  const { topLevel, enfantsDe, terminees, parentesCandidates } = useMemo(() => {
     const actives = taches.filter(
       (t) => t.statut === "a_faire" || t.statut === "en_cours",
     );
-    const terminees = taches.filter((t) => t.statut === "terminee");
-    return { actives, terminees };
-  }, [taches]);
+    const activesFiltrees = actives.filter(correspondAuFiltre);
+    const parentsIds = new Set(
+      activesFiltrees.filter((t) => !t.tacheParenteId).map((t) => t.id),
+    );
+    // Une tâche est "de premier niveau" si elle n'a pas de parente affichée.
+    const topLevel = activesFiltrees.filter(
+      (t) => !t.tacheParenteId || !parentsIds.has(t.tacheParenteId),
+    );
+    const enfantsDe = (id: string) =>
+      activesFiltrees.filter((t) => t.tacheParenteId === id);
+    const terminees = taches
+      .filter((t) => t.statut === "terminee")
+      .filter(correspondAuFiltre);
+    // Candidates pour devenir une tâche parente : tâches actives autonomes.
+    const parentesCandidates = actives.filter((t) => !t.tacheParenteId);
+    return { topLevel, enfantsDe, terminees, parentesCandidates };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taches, filtreProjet]);
 
   async function ajouter(saisie: SaisieTache) {
     setEnregistrement(true);
@@ -32,6 +66,13 @@ function GestionTaches() {
       setEnregistrement(false);
     }
   }
+
+  function projetDe(t: Tache) {
+    const p = t.projetId ? projetParId.get(t.projetId) : undefined;
+    return p ? { nom: p.nom, couleur: p.couleur } : undefined;
+  }
+
+  const aucune = !chargement && topLevel.length === 0 && terminees.length === 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -48,11 +89,32 @@ function GestionTaches() {
         )}
       </div>
 
+      {projets.length > 0 && (
+        <label className="flex items-center gap-2 text-sm text-airzen-secondary">
+          Projet :
+          <select
+            value={filtreProjet}
+            onChange={(e) => setFiltreProjet(e.target.value)}
+            className="rounded-lg border border-airzen-neutral/60 bg-white px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
+          >
+            <option value="tous">Tous</option>
+            <option value="sans">Sans projet</option>
+            {projets.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nom}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       {formulaireOuvert && (
         <FormulaireTache
           onValider={ajouter}
           onAnnuler={() => setFormulaireOuvert(false)}
           enCours={enregistrement}
+          projets={projets}
+          tachesParentes={parentesCandidates}
         />
       )}
 
@@ -60,26 +122,44 @@ function GestionTaches() {
 
       {chargement ? (
         <p className="text-sm font-light text-airzen-secondary">Chargement…</p>
-      ) : actives.length === 0 && terminees.length === 0 ? (
+      ) : aucune ? (
         <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
           <p className="font-light text-airzen-secondary">
-            Aucune tâche pour l&apos;instant. Ajoutez-en une pour commencer 🌱
+            Aucune tâche ici. Ajoutez-en une pour commencer 🌱
           </p>
         </div>
       ) : (
         <>
           <div className="flex flex-col gap-3">
-            {actives.map((t) => (
-              <CarteTache
-                key={t.id}
-                tache={t}
-                onTerminer={(t) => terminer(t.id)}
-                onSupprimer={(t) => supprimer(t.id)}
-              />
-            ))}
-            {actives.length === 0 && (
+            {topLevel.map((t) => {
+              const enfants = enfantsDe(t.id);
+              return (
+                <div key={t.id} className="flex flex-col gap-2">
+                  <CarteTache
+                    tache={t}
+                    projet={projetDe(t)}
+                    onTerminer={(t) => terminer(t.id)}
+                    onSupprimer={(t) => supprimer(t.id)}
+                  />
+                  {enfants.length > 0 && (
+                    <div className="ml-4 flex flex-col gap-2 border-l-2 border-airzen-neutral/30 pl-4">
+                      {enfants.map((s) => (
+                        <CarteTache
+                          key={s.id}
+                          tache={s}
+                          projet={projetDe(s)}
+                          onTerminer={(s) => terminer(s.id)}
+                          onSupprimer={(s) => supprimer(s.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {topLevel.length === 0 && terminees.length > 0 && (
               <p className="text-sm font-light text-airzen-secondary">
-                Tout est fait, bravo ✨
+                Tout est fait ici, bravo ✨
               </p>
             )}
           </div>
@@ -100,6 +180,7 @@ function GestionTaches() {
                   <CarteTache
                     key={t.id}
                     tache={t}
+                    projet={projetDe(t)}
                     onRouvrir={(t) => rouvrir(t.id)}
                     onSupprimer={(t) => supprimer(t.id)}
                   />
@@ -116,7 +197,9 @@ export default function PageTaches() {
   return (
     <RequireAuth>
       <AppShell>
-        <GestionTaches />
+        <Suspense fallback={null}>
+          <GestionTaches />
+        </Suspense>
       </AppShell>
     </RequireAuth>
   );
