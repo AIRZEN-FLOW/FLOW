@@ -16,7 +16,7 @@ import { LogoAirZen } from "@/components/LogoAirZen";
 
 type Mode = "connexion" | "inscription";
 
-/** Traduit les codes d'erreur Firebase en messages doux et compréhensibles. */
+/** Traduit les codes d'erreur Firebase en messages compréhensibles et actionnables. */
 function messageErreur(code: string): string {
   switch (code) {
     case "auth/invalid-email":
@@ -32,11 +32,31 @@ function messageErreur(code: string): string {
     case "auth/user-not-found":
       return "E-mail ou mot de passe incorrect.";
     case "auth/popup-closed-by-user":
+    case "auth/cancelled-popup-request":
       return "Connexion Google annulée.";
+    case "auth/popup-blocked":
+      return "La fenêtre Google a été bloquée par le navigateur. Autorisez les pop-ups pour ce site.";
+    // ─── Erreurs de CONFIGURATION (à corriger côté Firebase/Render) ───
+    case "auth/invalid-api-key":
+    case "auth/api-key-not-valid.-please-pass-a-valid-api-key.":
+      return "Configuration incomplète : les clés Firebase (NEXT_PUBLIC_FIREBASE_*) sont absentes ou incorrectes dans les variables d'environnement Render.";
+    case "auth/configuration-not-found":
+    case "auth/operation-not-allowed":
+      return "La connexion e-mail/mot de passe n'est pas activée dans Firebase (Console → Authentication → Sign-in method → Email/Password).";
+    case "auth/unauthorized-domain":
+      return "Ce site n'est pas autorisé dans Firebase : ajoutez ce domaine dans Console Firebase → Authentication → Settings → Authorized domains.";
+    case "auth/network-request-failed":
+      return "Problème de connexion réseau vers Firebase. Vérifiez votre connexion et réessayez.";
+    case "auth/too-many-requests":
+      return "Trop de tentatives. Patientez quelques minutes avant de réessayer.";
     default:
-      return "Une erreur est survenue. Réessayez dans un instant.";
+      // On affiche le code technique : indispensable pour diagnostiquer à distance.
+      return `Une erreur est survenue${code ? ` (code : ${code})` : ""}. Réessayez dans un instant.`;
   }
 }
+
+/** Vrai si les clés Firebase publiques ont bien été intégrées au moment du build. */
+const configFirebasePresente = Boolean(process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
 
 export default function PageConnexion() {
   const router = useRouter();
@@ -100,6 +120,17 @@ export default function PageConnexion() {
               : "Créons votre espace en douceur."}
           </p>
         </div>
+
+        {!configFirebasePresente && (
+          <div className="mb-4 rounded-2xl bg-q1/10 p-4 text-sm text-q1">
+            <p className="font-semibold">Configuration Firebase absente</p>
+            <p className="mt-1 font-light">
+              Les variables <code>NEXT_PUBLIC_FIREBASE_*</code> ne sont pas renseignées
+              dans Render (Environment). Ajoutez-les puis relancez un déploiement — la
+              connexion ne peut pas fonctionner sans elles.
+            </p>
+          </div>
+        )}
 
         <form
           onSubmit={soumettre}

@@ -53,6 +53,17 @@ Toute la conception du projet est dans le dossier [`docs/`](./docs) :
 - [ ] Étape 8 — Google Agenda (lecture seule)
 - [ ] Étape 9 — PWA complète
 
+## Éviter la mise en veille (plan gratuit Render)
+
+Sur le plan gratuit, Render **endort** le serveur après ~15 minutes sans visite (d'où un
+démarrage lent de 30-60 s à la visite suivante). Deux solutions :
+
+1. **Gratuite** : créer un compte sur [uptimerobot.com](https://uptimerobot.com) (gratuit)
+   et ajouter un « monitor » HTTP qui appelle `https://VOTRE-APP.onrender.com/api/sante`
+   toutes les 5 minutes. Ce trafic régulier garde le serveur éveillé.
+2. **Payante (la plus fiable)** : passer le service Render au plan **Starter** (~7 $/mois),
+   qui ne s'endort jamais.
+
 ## Configuration (pour déployer)
 
 Les variables d'environnement (clés Firebase, etc.) se renseignent dans le tableau de bord
