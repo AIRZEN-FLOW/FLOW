@@ -60,13 +60,17 @@ la tâche), et durée de la tâche.
 
 ## Où démarrer une nouvelle session
 
-État actuel : **Étapes 1 à 5 terminées (MVP + projets/sous-tâches).** La prochaine étape
-est l'**Étape 6 — Découpage automatique par IA**. Vérifier la dernière étape cochée dans
-le README et continuer à partir de là.
+État actuel : **Étapes 1 à 9 toutes terminées (plan v1 complet).** Prochaines pistes :
+tests en conditions réelles (installation PWA sur téléphone, connexion Google Agenda),
+puis les « étapes ultérieures » du plan (pièces jointes, mode sombre, intégrations).
 
 Architecture mise en place :
-- `lib/types.ts` (modèle), `lib/eisenhower.ts`, `lib/energie.ts`, `lib/matching.ts` (logique pure)
-- `lib/firebase/client.ts` (init paresseuse, navigateur uniquement), `lib/data/*` (CRUD Firestore)
-- `lib/hooks/*` (useTaches, useProjets, useEnergieMoment)
-- `components/AuthProvider.tsx` (contexte auth + profil), `RequireAuth`, `AppShell`
-- Écrans : `/login`, `/` (suggestions), `/taches`, `/projets`, `/parametres`
+- `lib/types.ts` (modèle), `lib/eisenhower.ts`, `lib/energie.ts`, `lib/matching.ts`,
+  `lib/recurrence.ts` (logique pure)
+- `lib/firebase/client.ts` (init paresseuse), `lib/firebase/admin.ts` (serveur),
+  `lib/data/*` (CRUD Firestore), `lib/google/calendar.ts` (lecture seule, serveur)
+- `lib/hooks/*` (useTaches, useProjets, useEnergieMoment, useOccupations)
+- `components/AuthProvider.tsx`, `RequireAuth`, `AppShell`, `ModaleDecoupage`
+- Écrans : `/login`, `/` (suggestions), `/taches`, `/planning`, `/projets`, `/parametres`
+- Routes API : `/api/decoupage` (IA), `/api/google/*` (OAuth + freeBusy), `/api/sante`
+- PWA : `app/manifest.ts`, `public/sw.js`, icônes `public/icons/`

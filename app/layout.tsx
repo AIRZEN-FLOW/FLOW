@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
+import { EnregistrementSW } from "@/components/EnregistrementSW";
 
 // Montserrat : police unique de la marque AIR ZEN (voir 04-design-system.md)
 const montserrat = Montserrat({
@@ -14,6 +15,12 @@ export const metadata: Metadata = {
   title: "AIR ZEN Flow",
   description:
     "L'application qui vous aide à décider quoi faire et quand, en croisant urgence, énergie, temps disponible et durée.",
+  // PWA : comportement plein écran une fois installée sur iOS.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "AIR ZEN Flow",
+  },
 };
 
 export const viewport: Viewport = {
@@ -29,6 +36,7 @@ export default function RootLayout({
     <html lang="fr" className={`${montserrat.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <AuthProvider>{children}</AuthProvider>
+        <EnregistrementSW />
       </body>
     </html>
   );

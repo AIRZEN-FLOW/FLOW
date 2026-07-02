@@ -48,10 +48,14 @@ Toute la conception du projet est dans le dossier [`docs/`](./docs) :
 - [x] **Étape 3** — Créer et lister des tâches (quadrant Eisenhower)
 - [x] **Étape 4** — Matching énergie / durée (fin du MVP)
 - [x] **Étape 5** — Projets et sous-tâches
-- [ ] Étape 6 — Découpage automatique par IA (API Anthropic)
-- [ ] Étape 7 — Récurrence
-- [ ] Étape 8 — Google Agenda (lecture seule)
-- [ ] Étape 9 — PWA complète
+- [x] **Étape 6** — Découpage automatique par IA (API Anthropic)
+- [x] **Étape 7** — Récurrence
+- [x] **Étape 8** — Google Agenda (lecture seule) + vue "journée proposée"
+- [x] **Étape 9** — PWA (manifest, icônes, service worker)
+
+**Toutes les étapes du plan v1 sont codées.** Restent les vérifications en conditions
+réelles : tester l'installation PWA sur téléphone (Chrome Android, Safari iOS) et la
+connexion Google Agenda une fois `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` configurés.
 
 ## Éviter la mise en veille (plan gratuit Render)
 
