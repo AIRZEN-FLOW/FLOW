@@ -14,6 +14,7 @@ import {
 } from "@/lib/data/taches";
 import { calculerQuadrant } from "@/lib/eisenhower";
 import { tsEnDate } from "@/lib/format";
+import { occurrenceSuivante } from "@/lib/recurrence";
 
 export function useTaches() {
   const { user, utilisateur } = useAuth();
@@ -130,6 +131,40 @@ export function useTaches() {
     [],
   );
 
+  // Étape 7 — terminer une tâche : si elle est récurrente, l'occurrence
+  // suivante est créée automatiquement selon la règle (sauf dateFin dépassée).
+  const terminer = useCallback(
+    async (id: string) => {
+      const tache = taches.find((t) => t.id === id);
+      await changerStatut(id, "terminee");
+      if (!user || !tache?.recurrenceRegle) return;
+      const suivante = occurrenceSuivante(tache);
+      if (!suivante) return;
+      await creerTache(
+        user.uid,
+        {
+          titre: tache.titre,
+          description: tache.description,
+          dateEcheance: suivante.dateEcheance,
+          niveauImportance: tache.niveauImportance,
+          dureeEstimeeMinutes: tache.dureeEstimeeMinutes,
+          niveauEnergieRequis: tache.niveauEnergieRequis,
+          tags: tache.tags,
+          projetId: tache.projetId,
+          source: tache.source,
+          recurrenceRegle: {
+            frequence: tache.recurrenceRegle.frequence,
+            joursConcernes: tache.recurrenceRegle.joursConcernes,
+            dateFin: tsEnDate(tache.recurrenceRegle.dateFin ?? null),
+          },
+        },
+        seuilJours,
+      );
+      await recharger();
+    },
+    [taches, user, seuilJours, changerStatut, recharger],
+  );
+
   const supprimer = useCallback(async (id: string) => {
     setTaches((prev) => prev.filter((t) => t.id !== id));
     await supprimerTache(id);
@@ -143,7 +178,7 @@ export function useTaches() {
     creer,
     creerAvecSousTaches,
     modifier,
-    terminer: (id: string) => changerStatut(id, "terminee"),
+    terminer,
     rouvrir: (id: string) => changerStatut(id, "a_faire"),
     supprimer,
   };

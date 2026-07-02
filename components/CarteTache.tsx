@@ -49,6 +49,11 @@ export function CarteTache({
               énergie {libelleNiveau(tache.niveauEnergieRequis).toLowerCase()}
             </span>
             {echeance && <span>échéance {echeance}</span>}
+            {tache.recurrenceRegle && (
+              <span title="Tâche récurrente" aria-label="Tâche récurrente">
+                ↻ récurrente
+              </span>
+            )}
             {projet && (
               <span
                 className="inline-flex items-center gap-1.5"

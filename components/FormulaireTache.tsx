@@ -5,13 +5,34 @@
 // le reste replié sous "Plus d'options" pour ne pas intimider.
 import { useState, type FormEvent } from "react";
 import type {
+  Jour,
   NiveauEnergie,
   NiveauImportance,
   Projet,
   SaisieTache,
   Tache,
 } from "@/lib/types";
+import { JOURS_SEMAINE } from "@/lib/types";
 import { tsEnDate, dateEnValeurInput } from "@/lib/format";
+
+type Frequence = "aucune" | "quotidienne" | "hebdomadaire" | "mensuelle";
+
+const OPTIONS_FREQUENCE: { valeur: Frequence; label: string }[] = [
+  { valeur: "aucune", label: "Aucune" },
+  { valeur: "quotidienne", label: "Chaque jour" },
+  { valeur: "hebdomadaire", label: "Chaque semaine" },
+  { valeur: "mensuelle", label: "Chaque mois" },
+];
+
+const LIBELLE_JOUR_COURT: Record<Jour, string> = {
+  lundi: "L",
+  mardi: "Ma",
+  mercredi: "Me",
+  jeudi: "J",
+  vendredi: "V",
+  samedi: "S",
+  dimanche: "D",
+};
 
 const DUREES_RAPIDES = [15, 30, 45, 60, 90];
 
@@ -99,6 +120,22 @@ export function FormulaireTache({
   const [projetId, setProjetId] = useState(init?.projetId ?? "");
   const [parenteId, setParenteId] = useState(init?.tacheParenteId ?? "");
   const [optionsOuvertes, setOptionsOuvertes] = useState(false);
+  // Étape 7 — récurrence
+  const [frequence, setFrequence] = useState<Frequence>(
+    init?.recurrenceRegle?.frequence ?? "aucune",
+  );
+  const [joursConcernes, setJoursConcernes] = useState<Jour[]>(
+    init?.recurrenceRegle?.joursConcernes ?? [],
+  );
+  const [finRecurrence, setFinRecurrence] = useState(
+    dateEnValeurInput(tsEnDate(init?.recurrenceRegle?.dateFin ?? null)),
+  );
+
+  function basculerJour(jour: Jour) {
+    setJoursConcernes((prev) =>
+      prev.includes(jour) ? prev.filter((j) => j !== jour) : [...prev, jour],
+    );
+  }
 
   async function soumettre(e: FormEvent) {
     e.preventDefault();
@@ -116,6 +153,14 @@ export function FormulaireTache({
         .filter(Boolean),
       projetId: projetId || null,
       tacheParenteId: parenteId || null,
+      recurrenceRegle:
+        frequence === "aucune"
+          ? null
+          : {
+              frequence,
+              joursConcernes: frequence === "hebdomadaire" ? joursConcernes : [],
+              dateFin: finRecurrence ? new Date(`${finRecurrence}T23:59:59`) : null,
+            },
     };
     await onValider(saisie);
   }
@@ -197,6 +242,40 @@ export function FormulaireTache({
               className="rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
             />
           </Champ>
+          <Champ label="Répétition">
+            <Chips options={OPTIONS_FREQUENCE} valeur={frequence} onChange={setFrequence} />
+            {frequence === "hebdomadaire" && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {JOURS_SEMAINE.map((jour) => (
+                  <button
+                    key={jour}
+                    type="button"
+                    onClick={() => basculerJour(jour)}
+                    title={jour}
+                    className={`h-8 w-8 rounded-full text-xs transition-colors ${
+                      joursConcernes.includes(jour)
+                        ? "bg-airzen-primary font-medium text-white"
+                        : "bg-airzen-bg text-airzen-secondary hover:bg-airzen-neutral/30"
+                    }`}
+                  >
+                    {LIBELLE_JOUR_COURT[jour]}
+                  </button>
+                ))}
+              </div>
+            )}
+            {frequence !== "aucune" && (
+              <label className="mt-2 flex items-center gap-2 text-sm text-airzen-secondary">
+                Jusqu&apos;au (optionnel)
+                <input
+                  type="date"
+                  value={finRecurrence}
+                  onChange={(e) => setFinRecurrence(e.target.value)}
+                  className="rounded-lg border border-airzen-neutral/60 px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
+                />
+              </label>
+            )}
+          </Champ>
+
           <Champ label="Tags (séparés par des virgules)">
             <input
               type="text"
