@@ -41,8 +41,16 @@ export async function creerTache(
     niveauEnergieRequis: saisie.niveauEnergieRequis,
     quadrantEisenhower: quadrantPourSaisie(saisie, seuilJours),
     tags: saisie.tags ?? [],
-    source: "manuelle",
-    recurrenceRegle: null,
+    source: saisie.source ?? "manuelle",
+    recurrenceRegle: saisie.recurrenceRegle
+      ? {
+          frequence: saisie.recurrenceRegle.frequence,
+          joursConcernes: saisie.recurrenceRegle.joursConcernes ?? [],
+          dateFin: saisie.recurrenceRegle.dateFin
+            ? Timestamp.fromDate(saisie.recurrenceRegle.dateFin)
+            : null,
+        }
+      : null,
     creeLe: serverTimestamp(),
     modifieLe: serverTimestamp(),
   });

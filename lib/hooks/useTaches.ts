@@ -84,6 +84,35 @@ export function useTaches() {
     [user, seuilJours, recharger],
   );
 
+  // Étape 6 — crée la tâche mère puis ses sous-tâches issues du découpage IA.
+  const creerAvecSousTaches = useCallback(
+    async (
+      saisie: SaisieTache,
+      sousTaches: { titre: string; dureeEstimeeMinutes: number }[],
+    ) => {
+      if (!user) return;
+      const idMere = await creerTache(user.uid, saisie, seuilJours);
+      for (const s of sousTaches) {
+        await creerTache(
+          user.uid,
+          {
+            titre: s.titre,
+            dureeEstimeeMinutes: s.dureeEstimeeMinutes,
+            niveauImportance: saisie.niveauImportance,
+            niveauEnergieRequis: saisie.niveauEnergieRequis,
+            dateEcheance: saisie.dateEcheance,
+            projetId: saisie.projetId,
+            tacheParenteId: idMere,
+            source: "decoupage_auto",
+          },
+          seuilJours,
+        );
+      }
+      await recharger();
+    },
+    [user, seuilJours, recharger],
+  );
+
   const modifier = useCallback(
     async (id: string, saisie: SaisieTache) => {
       await majTache(id, saisie, seuilJours);
@@ -112,6 +141,7 @@ export function useTaches() {
     erreur,
     recharger,
     creer,
+    creerAvecSousTaches,
     modifier,
     terminer: (id: string) => changerStatut(id, "terminee"),
     rouvrir: (id: string) => changerStatut(id, "a_faire"),

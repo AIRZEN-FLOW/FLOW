@@ -8,20 +8,36 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
 import { FormulaireTache } from "@/components/FormulaireTache";
 import { CarteTache } from "@/components/CarteTache";
+import { ModaleDecoupage, type SousTacheChoisie } from "@/components/ModaleDecoupage";
+import { useAuth } from "@/components/AuthProvider";
 import { useTaches } from "@/lib/hooks/useTaches";
 import { useProjets } from "@/lib/hooks/useProjets";
 import type { SaisieTache, Tache } from "@/lib/types";
 
 function GestionTaches() {
-  const { taches, chargement, erreur, creer, terminer, rouvrir, supprimer } = useTaches();
+  const { utilisateur } = useAuth();
+  const {
+    taches,
+    chargement,
+    erreur,
+    creer,
+    creerAvecSousTaches,
+    terminer,
+    rouvrir,
+    supprimer,
+  } = useTaches();
   const { projets } = useProjets();
   const searchParams = useSearchParams();
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   const [enregistrement, setEnregistrement] = useState(false);
   const [terminéesVisibles, setTerminéesVisibles] = useState(false);
+  // Étape 6 — saisie en attente de décision de découpage (tâche > seuil).
+  const [saisieADecouper, setSaisieADecouper] = useState<SaisieTache | null>(null);
   const [filtreProjet, setFiltreProjet] = useState<string>(
     searchParams.get("projet") ?? "tous",
   );
+
+  const seuilDecoupage = utilisateur?.seuilDecoupageMinutes ?? 90;
 
   const projetParId = useMemo(
     () => new Map(projets.map((p) => [p.id, p])),
@@ -58,6 +74,12 @@ function GestionTaches() {
   }, [taches, filtreProjet]);
 
   async function ajouter(saisie: SaisieTache) {
+    // Étape 6 — au-delà du seuil, on propose systématiquement un découpage
+    // avant validation (uniquement pour une tâche autonome, pas une sous-tâche).
+    if (saisie.dureeEstimeeMinutes > seuilDecoupage && !saisie.tacheParenteId) {
+      setSaisieADecouper(saisie);
+      return;
+    }
     setEnregistrement(true);
     try {
       await creer(saisie);
@@ -65,6 +87,20 @@ function GestionTaches() {
     } finally {
       setEnregistrement(false);
     }
+  }
+
+  async function creerEntiere() {
+    if (!saisieADecouper) return;
+    await creer(saisieADecouper);
+    setSaisieADecouper(null);
+    setFormulaireOuvert(false);
+  }
+
+  async function creerDecoupee(sousTaches: SousTacheChoisie[]) {
+    if (!saisieADecouper) return;
+    await creerAvecSousTaches(saisieADecouper, sousTaches);
+    setSaisieADecouper(null);
+    setFormulaireOuvert(false);
   }
 
   function projetDe(t: Tache) {
@@ -115,6 +151,15 @@ function GestionTaches() {
           enCours={enregistrement}
           projets={projets}
           tachesParentes={parentesCandidates}
+        />
+      )}
+
+      {saisieADecouper && (
+        <ModaleDecoupage
+          saisie={saisieADecouper}
+          onCreerEntiere={creerEntiere}
+          onCreerAvecSousTaches={creerDecoupee}
+          onAnnuler={() => setSaisieADecouper(null)}
         />
       )}
 

@@ -95,4 +95,10 @@ export interface SaisieTache {
   tags?: string[];
   projetId?: string | null;
   tacheParenteId?: string | null;
+  source?: SourceTache;
+  recurrenceRegle?: {
+    frequence: "quotidienne" | "hebdomadaire" | "mensuelle";
+    joursConcernes?: Jour[];
+    dateFin?: Date | null;
+  } | null;
 }
