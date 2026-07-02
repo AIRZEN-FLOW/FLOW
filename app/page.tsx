@@ -1,7 +1,9 @@
 "use client";
 
-// Écran principal "Aujourd'hui" — fil de suggestions (Étape 4).
+// Écran principal "Aujourd'hui" — fil de suggestions (Étapes 4 & 8).
 // Croise énergie du moment × temps disponible × quadrant Eisenhower.
+// Si Google Agenda est connecté, le temps disponible est déduit du prochain
+// rendez-vous ; le choix manuel reste prioritaire.
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -10,6 +12,10 @@ import { BandeauEnergie } from "@/components/BandeauEnergie";
 import { CarteTache } from "@/components/CarteTache";
 import { useTaches } from "@/lib/hooks/useTaches";
 import { useEnergieMoment } from "@/lib/hooks/useEnergieMoment";
+import {
+  minutesAvantProchaineOccupation,
+  useOccupations,
+} from "@/lib/hooks/useOccupations";
 import { calculerSuggestions, type TempsDisponible } from "@/lib/matching";
 import { tsEnDate } from "@/lib/format";
 
@@ -20,19 +26,39 @@ const OPTIONS_TEMPS: { valeur: TempsDisponible; label: string }[] = [
   { valeur: "plus", label: "Plus" },
 ];
 
+function heureCourte(d: Date): string {
+  return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
 function EcranAujourdhui() {
   const { taches, chargement, terminer } = useTaches();
   const { energieEffective, ajustementManuel, definirOverride, reinitialiser } =
     useEnergieMoment();
-  const [tempsDisponible, setTempsDisponible] = useState<TempsDisponible>(30);
+  const { occupations, connecte } = useOccupations();
+  // Choix manuel (prioritaire) ; null = suivre l'agenda (ou 30 min par défaut).
+  const [tempsChoisi, setTempsChoisi] = useState<TempsDisponible | null>(null);
+
+  // Temps déduit de l'agenda : minutes avant le prochain rendez-vous.
+  const agenda = useMemo(() => {
+    if (!connecte || !occupations) return null;
+    return { creneau: minutesAvantProchaineOccupation(occupations) };
+  }, [connecte, occupations]);
+
+  const tempsAuto: TempsDisponible | number | null = agenda
+    ? agenda.creneau === null
+      ? "plus" // plus aucun rendez-vous aujourd'hui
+      : agenda.creneau.minutes
+    : null;
+
+  const tempsEffectif: TempsDisponible | number = tempsChoisi ?? tempsAuto ?? 30;
 
   const suggestions = useMemo(() => {
     const avecEcheance = taches.map((t) => ({
       ...t,
       echeanceDate: tsEnDate(t.dateEcheance),
     }));
-    return calculerSuggestions(avecEcheance, energieEffective, tempsDisponible, 5);
-  }, [taches, energieEffective, tempsDisponible]);
+    return calculerSuggestions(avecEcheance, energieEffective, tempsEffectif, 5);
+  }, [taches, energieEffective, tempsEffectif]);
 
   const aucuneTache =
     !chargement &&
@@ -50,15 +76,35 @@ function EcranAujourdhui() {
       />
 
       <section className="flex flex-col gap-2">
-        <p className="text-sm text-airzen-secondary">Combien de temps avez-vous là, maintenant ?</p>
-        <div className="flex flex-wrap gap-2">
+        {agenda && agenda.creneau !== null && tempsChoisi === null ? (
+          <p className="text-sm text-airzen-secondary">
+            📅 Prochain rendez-vous à{" "}
+            <span className="font-semibold text-airzen-primary">
+              {heureCourte(agenda.creneau.prochaine.debut)}
+            </span>{" "}
+            — vous avez environ{" "}
+            <span className="font-semibold text-airzen-primary">
+              {agenda.creneau.minutes} min
+            </span>{" "}
+            devant vous.
+          </p>
+        ) : agenda && agenda.creneau === null && tempsChoisi === null ? (
+          <p className="text-sm text-airzen-secondary">
+            📅 Plus aucun rendez-vous aujourd&apos;hui — la journée vous appartient.
+          </p>
+        ) : (
+          <p className="text-sm text-airzen-secondary">
+            Combien de temps avez-vous là, maintenant ?
+          </p>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
           {OPTIONS_TEMPS.map((o) => (
             <button
               key={String(o.valeur)}
               type="button"
-              onClick={() => setTempsDisponible(o.valeur)}
+              onClick={() => setTempsChoisi(o.valeur)}
               className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
-                tempsDisponible === o.valeur
+                tempsChoisi === o.valeur
                   ? "bg-airzen-primary font-medium text-white"
                   : "bg-white text-airzen-secondary shadow-sm hover:bg-airzen-bg"
               }`}
@@ -66,6 +112,15 @@ function EcranAujourdhui() {
               {o.label}
             </button>
           ))}
+          {tempsChoisi !== null && tempsAuto !== null && (
+            <button
+              type="button"
+              onClick={() => setTempsChoisi(null)}
+              className="text-xs text-airzen-neutral hover:text-airzen-secondary"
+            >
+              suivre l&apos;agenda
+            </button>
+          )}
         </div>
       </section>
 
@@ -108,12 +163,20 @@ function EcranAujourdhui() {
         )}
       </section>
 
-      <Link
-        href="/taches"
-        className="self-start text-sm font-medium text-airzen-secondary hover:text-airzen-primary"
-      >
-        Gérer toutes mes tâches →
-      </Link>
+      <div className="flex flex-wrap gap-x-5 gap-y-1">
+        <Link
+          href="/taches"
+          className="text-sm font-medium text-airzen-secondary hover:text-airzen-primary"
+        >
+          Gérer toutes mes tâches →
+        </Link>
+        <Link
+          href="/planning"
+          className="text-sm font-medium text-airzen-secondary hover:text-airzen-primary"
+        >
+          Voir ma journée proposée →
+        </Link>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
-// Étape 4 — Réglages : créneaux d'énergie de la journée + seuil d'urgence.
-import { useState } from "react";
+// Étapes 4 & 8 — Réglages : créneaux d'énergie, seuil d'urgence, Google Agenda.
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/components/AuthProvider";
@@ -10,6 +11,100 @@ import { majProfilEnergie, majUtilisateur } from "@/lib/data/profil";
 import type { NiveauEnergie, ProfilEnergie } from "@/lib/types";
 
 const NIVEAUX: NiveauEnergie[] = ["haute", "moyenne", "basse"];
+
+// Étape 8 — Connexion Google Agenda (lecture seule).
+function SectionGoogleAgenda() {
+  const { user, utilisateur, rafraichir } = useAuth();
+  const searchParams = useSearchParams();
+  const retour = searchParams.get("google"); // "ok" | "erreur" | null
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  const connecte = utilisateur?.googleCalendarConnecte ?? false;
+
+  async function connecter() {
+    if (!user) return;
+    setEnCours(true);
+    setErreur(null);
+    try {
+      const jeton = await user.getIdToken();
+      const reponse = await fetch("/api/google/connexion", {
+        headers: { Authorization: `Bearer ${jeton}` },
+      });
+      const donnees = await reponse.json();
+      if (!reponse.ok) {
+        setErreur(donnees?.erreur ?? "Connexion impossible pour le moment.");
+        setEnCours(false);
+        return;
+      }
+      window.location.href = donnees.url; // départ vers le consentement Google
+    } catch {
+      setErreur("Connexion impossible pour le moment.");
+      setEnCours(false);
+    }
+  }
+
+  async function deconnecter() {
+    if (!user) return;
+    setEnCours(true);
+    try {
+      const jeton = await user.getIdToken();
+      await fetch("/api/google/connexion", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${jeton}` },
+      });
+      await rafraichir();
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
+      <h2 className="font-semibold text-airzen-primary">Google Agenda</h2>
+      <p className="text-sm font-light text-airzen-secondary">
+        En lecture seule : l&apos;app consulte vos créneaux occupés pour calculer votre
+        temps réellement disponible. Elle ne crée, ne modifie et ne supprime jamais
+        d&apos;événement.
+      </p>
+
+      {retour === "ok" && (
+        <p className="rounded-lg bg-q2/10 px-3 py-2 text-sm text-q2">
+          Google Agenda connecté ✓
+        </p>
+      )}
+      {retour === "erreur" && (
+        <p className="rounded-lg bg-q1/10 px-3 py-2 text-sm text-q1">
+          La connexion n&apos;a pas abouti. Réessayez.
+        </p>
+      )}
+      {erreur && <p className="rounded-lg bg-q1/10 px-3 py-2 text-sm text-q1">{erreur}</p>}
+
+      {connecte ? (
+        <div className="mt-1 flex items-center gap-3">
+          <span className="text-sm font-medium text-airzen-primary">Connecté ✓</span>
+          <button
+            type="button"
+            onClick={deconnecter}
+            disabled={enCours}
+            className="text-sm text-airzen-neutral hover:text-q1 disabled:opacity-50"
+          >
+            Déconnecter
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={connecter}
+          disabled={enCours}
+          className="mt-1 self-start rounded-full border border-airzen-neutral/60 px-4 py-2 text-sm font-medium text-airzen-primary transition-colors hover:bg-airzen-bg disabled:opacity-50"
+        >
+          {enCours ? "Redirection…" : "Connecter Google Agenda"}
+        </button>
+      )}
+    </section>
+  );
+}
 
 function Reglages() {
   const { user, utilisateur, profilsEnergie, rafraichir } = useAuth();
@@ -105,6 +200,8 @@ function Reglages() {
         ))}
       </section>
 
+      <SectionGoogleAgenda />
+
       <section className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
         <h2 className="font-semibold text-airzen-primary">Seuil d&apos;urgence</h2>
         <p className="text-sm font-light text-airzen-secondary">
@@ -145,7 +242,9 @@ export default function PageParametres() {
   return (
     <RequireAuth>
       <AppShell>
-        <Reglages />
+        <Suspense fallback={null}>
+          <Reglages />
+        </Suspense>
       </AppShell>
     </RequireAuth>
   );

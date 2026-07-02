@@ -50,5 +50,11 @@ service cloud.firestore {
       allow read, update, delete: if estProprietaire();
       allow create: if creeParSoi();
     }
+
+    // SÉCURITÉ — collections serveur uniquement, AUCUNE règle volontairement :
+    //   - secretsGoogle : refresh tokens Google (jamais lisibles côté client)
+    //   - etatsOauth    : states anti-CSRF du flow OAuth
+    // Sans règle `match`, Firestore refuse tout accès client par défaut ;
+    // seul le SDK Admin (routes API Next.js sur Render) y accède.
   }
 }

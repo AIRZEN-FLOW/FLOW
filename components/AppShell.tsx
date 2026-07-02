@@ -16,6 +16,7 @@ interface LienNav {
 const NAVIGATION: LienNav[] = [
   { href: "/", label: "Aujourd'hui" },
   { href: "/taches", label: "Tâches" },
+  { href: "/planning", label: "Planning" },
   { href: "/projets", label: "Projets" },
   { href: "/parametres", label: "Réglages" },
 ];

@@ -81,7 +81,7 @@ export interface TacheAvecEcheance extends Tache {
 export function calculerSuggestions(
   taches: TacheAvecEcheance[],
   energieMoment: NiveauEnergie | null,
-  tempsDisponible: TempsDisponible,
+  tempsDisponible: TempsDisponible | number,
   maxResultats = 5,
   maintenant: Date = new Date(),
 ): Suggestion[] {
