@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import type { SaisieTache, StatutTache, Tache } from "@/lib/types";
 import {
+  assignerProjetTache,
   creerTache,
   getTaches,
   majStatutTache,
@@ -170,6 +171,18 @@ export function useTaches() {
     await supprimerTache(id);
   }, []);
 
+  // Rattache d'un coup plusieurs tâches déjà existantes à un projet
+  // (ex : tâches créées avant que le projet n'existe).
+  const rattacherAuProjet = useCallback(
+    async (ids: string[], projetId: string) => {
+      await Promise.all(ids.map((id) => assignerProjetTache(id, projetId)));
+      setTaches((prev) =>
+        prev.map((t) => (ids.includes(t.id) ? { ...t, projetId } : t)),
+      );
+    },
+    [],
+  );
+
   return {
     taches,
     chargement,
@@ -181,5 +194,6 @@ export function useTaches() {
     terminer,
     rouvrir: (id: string) => changerStatut(id, "a_faire"),
     supprimer,
+    rattacherAuProjet,
   };
 }

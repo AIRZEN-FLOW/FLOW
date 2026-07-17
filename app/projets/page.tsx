@@ -8,7 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { useProjets } from "@/lib/hooks/useProjets";
 import { useTaches } from "@/lib/hooks/useTaches";
 import { COULEURS_PROJET } from "@/lib/data/projets";
-import type { Projet } from "@/lib/types";
+import type { Projet, Tache } from "@/lib/types";
 
 function FormulaireProjet({
   onValider,
@@ -93,6 +93,125 @@ function FormulaireProjet({
   );
 }
 
+// Rattacher des tâches déjà existantes à un projet (créées avant lui, ou mal
+// classées) : liste cochable avec recherche, rattachement en un seul geste.
+function SelecteurTachesExistantes({
+  candidates,
+  projetParId,
+  onValider,
+  onAnnuler,
+}: {
+  candidates: Tache[];
+  projetParId: Map<string, Projet>;
+  onValider: (ids: string[]) => Promise<void>;
+  onAnnuler: () => void;
+}) {
+  const [selection, setSelection] = useState<Set<string>>(new Set());
+  const [recherche, setRecherche] = useState("");
+  const [enCours, setEnCours] = useState(false);
+
+  const filtrees = candidates.filter((t) =>
+    t.titre.toLowerCase().includes(recherche.trim().toLowerCase()),
+  );
+
+  function basculer(id: string) {
+    setSelection((prev) => {
+      const suivante = new Set(prev);
+      if (suivante.has(id)) suivante.delete(id);
+      else suivante.add(id);
+      return suivante;
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm">
+      <p className="text-sm font-medium text-airzen-primary">
+        Rattacher des tâches déjà existantes
+      </p>
+
+      {candidates.length === 0 ? (
+        <p className="text-sm font-light text-airzen-secondary">
+          Toutes vos autres tâches sont déjà dans ce projet.
+        </p>
+      ) : (
+        <>
+          <input
+            type="text"
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+            placeholder="Rechercher une tâche…"
+            className="rounded-lg border border-airzen-neutral/60 px-3 py-2 text-sm text-airzen-primary outline-none focus:border-airzen-secondary"
+          />
+
+          {filtrees.length === 0 ? (
+            <p className="text-sm font-light text-airzen-secondary">
+              Aucune tâche ne correspond.
+            </p>
+          ) : (
+            <ul className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
+              {filtrees.map((t) => {
+                const autreProjet = t.projetId ? projetParId.get(t.projetId) : undefined;
+                return (
+                  <li key={t.id}>
+                    <label className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-airzen-bg">
+                      <input
+                        type="checkbox"
+                        checked={selection.has(t.id)}
+                        onChange={() => basculer(t.id)}
+                        className="h-4 w-4 shrink-0 accent-airzen-primary"
+                      />
+                      <span className="min-w-0 flex-1 truncate text-sm text-airzen-primary">
+                        {t.titre}
+                      </span>
+                      {autreProjet && (
+                        <span className="shrink-0 text-xs text-airzen-neutral">
+                          déjà dans « {autreProjet.nom} »
+                        </span>
+                      )}
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </>
+      )}
+
+      <div className="flex items-center gap-3">
+        {candidates.length > 0 && (
+          <button
+            type="button"
+            disabled={selection.size === 0 || enCours}
+            onClick={async () => {
+              setEnCours(true);
+              try {
+                await onValider([...selection]);
+              } finally {
+                setEnCours(false);
+              }
+            }}
+            className="rounded-full bg-airzen-accent px-4 py-2 text-sm font-semibold text-airzen-primary transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {enCours
+              ? "Rattachement…"
+              : selection.size === 0
+                ? "Rattacher"
+                : `Rattacher ${selection.size} tâche${selection.size > 1 ? "s" : ""}`}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onAnnuler}
+          disabled={enCours}
+          className="text-sm font-medium text-airzen-secondary hover:text-airzen-primary"
+        >
+          Fermer
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const LIBELLE_STATUT: Record<Projet["statut"], string> = {
   actif: "Actif",
   en_pause: "En pause",
@@ -102,8 +221,12 @@ const LIBELLE_STATUT: Record<Projet["statut"], string> = {
 
 function GestionProjets() {
   const { projets, chargement, creer, changerStatut, supprimer } = useProjets();
-  const { taches } = useTaches();
+  const { taches, rattacherAuProjet } = useTaches();
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
+  // Un seul panneau de rattachement ouvert à la fois (id du projet concerné).
+  const [projetPourRattachement, setProjetPourRattachement] = useState<string | null>(
+    null,
+  );
 
   const compteParProjet = useMemo(() => {
     const compte = new Map<string, number>();
@@ -114,6 +237,17 @@ function GestionProjets() {
     }
     return compte;
   }, [taches]);
+
+  const projetParId = useMemo(() => new Map(projets.map((p) => [p.id, p])), [projets]);
+
+  // Tâches candidates au rattachement : tout sauf celles déjà dans CE projet,
+  // et hors sous-tâches (elles suivent leur tâche mère) et tâches annulées.
+  function candidatesPour(projetId: string): Tache[] {
+    return taches.filter(
+      (t) =>
+        t.projetId !== projetId && !t.tacheParenteId && t.statut !== "annulee",
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -189,6 +323,19 @@ function GestionProjets() {
                   >
                     + Nouvelle tâche
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setProjetPourRattachement((actuel) =>
+                        actuel === p.id ? null : p.id,
+                      )
+                    }
+                    className="font-medium text-airzen-primary hover:underline"
+                  >
+                    {projetPourRattachement === p.id
+                      ? "Fermer"
+                      : "+ Tâches existantes"}
+                  </button>
                   {p.statut === "actif" ? (
                     <button
                       type="button"
@@ -214,6 +361,20 @@ function GestionProjets() {
                     Supprimer
                   </button>
                 </div>
+
+                {projetPourRattachement === p.id && (
+                  <div className="mt-3">
+                    <SelecteurTachesExistantes
+                      candidates={candidatesPour(p.id)}
+                      projetParId={projetParId}
+                      onValider={async (ids) => {
+                        await rattacherAuProjet(ids, p.id);
+                        setProjetPourRattachement(null);
+                      }}
+                      onAnnuler={() => setProjetPourRattachement(null)}
+                    />
+                  </div>
+                )}
               </article>
             );
           })}

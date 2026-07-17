@@ -103,3 +103,15 @@ export async function supprimerTache(id: string): Promise<void> {
   const db = getDbClient();
   await deleteDoc(doc(db, "taches", id));
 }
+
+/** Rattache (ou détache, si null) une tâche existante à un projet — sans toucher au reste. */
+export async function assignerProjetTache(
+  id: string,
+  projetId: string | null,
+): Promise<void> {
+  const db = getDbClient();
+  await updateDoc(doc(db, "taches", id), {
+    projetId,
+    modifieLe: serverTimestamp(),
+  });
+}
