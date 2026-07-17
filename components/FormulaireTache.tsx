@@ -90,6 +90,8 @@ interface FormulaireTacheProps {
   onValider: (saisie: SaisieTache) => Promise<void> | void;
   onAnnuler?: () => void;
   valeursInitiales?: Tache;
+  /** Projet présélectionné à la création (ex : ajout depuis la fiche d'un projet). */
+  projetIdInitial?: string;
   enCours?: boolean;
   projets?: Projet[];
   tachesParentes?: Tache[];
@@ -99,6 +101,7 @@ export function FormulaireTache({
   onValider,
   onAnnuler,
   valeursInitiales,
+  projetIdInitial,
   enCours = false,
   projets = [],
   tachesParentes = [],
@@ -117,7 +120,7 @@ export function FormulaireTache({
   );
   const [description, setDescription] = useState(init?.description ?? "");
   const [tags, setTags] = useState((init?.tags ?? []).join(", "));
-  const [projetId, setProjetId] = useState(init?.projetId ?? "");
+  const [projetId, setProjetId] = useState(init?.projetId ?? projetIdInitial ?? "");
   const [parenteId, setParenteId] = useState(init?.tacheParenteId ?? "");
   const [optionsOuvertes, setOptionsOuvertes] = useState(false);
   // Étape 7 — récurrence

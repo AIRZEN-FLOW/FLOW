@@ -12,6 +12,7 @@ interface CarteTacheProps {
   raison?: string; // "pourquoi maintenant" (suggestions)
   attenue?: boolean; // affichage en retrait (second plan / terminée)
   projet?: { nom: string; couleur: string }; // pastille projet, si rattachée
+  onModifier?: (t: Tache) => void;
   onTerminer?: (t: Tache) => void;
   onRouvrir?: (t: Tache) => void;
   onSupprimer?: (t: Tache) => void;
@@ -22,6 +23,7 @@ export function CarteTache({
   raison,
   attenue = false,
   projet,
+  onModifier,
   onTerminer,
   onRouvrir,
   onSupprimer,
@@ -73,6 +75,15 @@ export function CarteTache({
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
+          {onModifier && (
+            <button
+              type="button"
+              onClick={() => onModifier(tache)}
+              className="rounded-full bg-airzen-bg px-3 py-1.5 text-xs font-medium text-airzen-secondary transition-colors hover:bg-airzen-neutral/30"
+            >
+              Modifier
+            </button>
+          )}
           {!terminee && onTerminer && (
             <button
               type="button"

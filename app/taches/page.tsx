@@ -22,20 +22,29 @@ function GestionTaches() {
     erreur,
     creer,
     creerAvecSousTaches,
+    modifier,
     terminer,
     rouvrir,
     supprimer,
   } = useTaches();
   const { projets } = useProjets();
   const searchParams = useSearchParams();
-  const [formulaireOuvert, setFormulaireOuvert] = useState(false);
+  const [formulaireOuvert, setFormulaireOuvert] = useState(
+    searchParams.get("nouvelle") === "1",
+  );
   const [enregistrement, setEnregistrement] = useState(false);
   const [terminéesVisibles, setTerminéesVisibles] = useState(false);
   // Étape 6 — saisie en attente de décision de découpage (tâche > seuil).
   const [saisieADecouper, setSaisieADecouper] = useState<SaisieTache | null>(null);
+  // Édition d'une tâche existante (mutuellement exclusif avec la création).
+  const [tacheEnEdition, setTacheEnEdition] = useState<Tache | null>(null);
   const [filtreProjet, setFiltreProjet] = useState<string>(
     searchParams.get("projet") ?? "tous",
   );
+
+  // Projet à présélectionner à la création (filtre actif, si c'est un vrai projet).
+  const projetIdInitial =
+    filtreProjet !== "tous" && filtreProjet !== "sans" ? filtreProjet : undefined;
 
   const seuilDecoupage = utilisateur?.seuilDecoupageMinutes ?? 90;
 
@@ -103,6 +112,22 @@ function GestionTaches() {
     setFormulaireOuvert(false);
   }
 
+  async function enregistrerModification(saisie: SaisieTache) {
+    if (!tacheEnEdition) return;
+    setEnregistrement(true);
+    try {
+      await modifier(tacheEnEdition.id, saisie);
+      setTacheEnEdition(null);
+    } finally {
+      setEnregistrement(false);
+    }
+  }
+
+  function ouvrirEdition(t: Tache) {
+    setFormulaireOuvert(false);
+    setTacheEnEdition(t);
+  }
+
   function projetDe(t: Tache) {
     const p = t.projetId ? projetParId.get(t.projetId) : undefined;
     return p ? { nom: p.nom, couleur: p.couleur } : undefined;
@@ -114,7 +139,7 @@ function GestionTaches() {
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-airzen-primary">Mes tâches</h1>
-        {!formulaireOuvert && (
+        {!formulaireOuvert && !tacheEnEdition && (
           <button
             type="button"
             onClick={() => setFormulaireOuvert(true)}
@@ -148,9 +173,21 @@ function GestionTaches() {
         <FormulaireTache
           onValider={ajouter}
           onAnnuler={() => setFormulaireOuvert(false)}
+          projetIdInitial={projetIdInitial}
           enCours={enregistrement}
           projets={projets}
           tachesParentes={parentesCandidates}
+        />
+      )}
+
+      {tacheEnEdition && (
+        <FormulaireTache
+          valeursInitiales={tacheEnEdition}
+          onValider={enregistrerModification}
+          onAnnuler={() => setTacheEnEdition(null)}
+          enCours={enregistrement}
+          projets={projets}
+          tachesParentes={parentesCandidates.filter((t) => t.id !== tacheEnEdition.id)}
         />
       )}
 
@@ -183,6 +220,7 @@ function GestionTaches() {
                   <CarteTache
                     tache={t}
                     projet={projetDe(t)}
+                    onModifier={ouvrirEdition}
                     onTerminer={(t) => terminer(t.id)}
                     onSupprimer={(t) => supprimer(t.id)}
                   />
@@ -193,6 +231,7 @@ function GestionTaches() {
                           key={s.id}
                           tache={s}
                           projet={projetDe(s)}
+                          onModifier={ouvrirEdition}
                           onTerminer={(s) => terminer(s.id)}
                           onSupprimer={(s) => supprimer(s.id)}
                         />
@@ -226,6 +265,7 @@ function GestionTaches() {
                     key={t.id}
                     tache={t}
                     projet={projetDe(t)}
+                    onModifier={ouvrirEdition}
                     onRouvrir={(t) => rouvrir(t.id)}
                     onSupprimer={(t) => supprimer(t.id)}
                   />

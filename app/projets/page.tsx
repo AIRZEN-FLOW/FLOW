@@ -183,6 +183,12 @@ function GestionProjets() {
                   >
                     Voir les tâches →
                   </Link>
+                  <Link
+                    href={`/taches?projet=${p.id}&nouvelle=1`}
+                    className="font-medium text-airzen-primary hover:underline"
+                  >
+                    + Nouvelle tâche
+                  </Link>
                   {p.statut === "actif" ? (
                     <button
                       type="button"
