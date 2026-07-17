@@ -50,6 +50,21 @@ export function useProjets() {
     [user, recharger],
   );
 
+  const modifier = useCallback(async (id: string, saisie: SaisieProjet) => {
+    setProjets((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? { ...p, nom: saisie.nom, couleur: saisie.couleur, description: saisie.description }
+          : p,
+      ),
+    );
+    await majProjet(id, {
+      nom: saisie.nom.trim(),
+      description: saisie.description?.trim() ?? "",
+      couleur: saisie.couleur,
+    });
+  }, []);
+
   const changerStatut = useCallback(
     async (id: string, statut: StatutProjet) => {
       setProjets((prev) => prev.map((p) => (p.id === id ? { ...p, statut } : p)));
@@ -63,5 +78,5 @@ export function useProjets() {
     await supprimerProjet(id);
   }, []);
 
-  return { projets, chargement, recharger, creer, changerStatut, supprimer };
+  return { projets, chargement, recharger, creer, modifier, changerStatut, supprimer };
 }

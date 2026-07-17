@@ -13,13 +13,15 @@ import type { Projet, Tache } from "@/lib/types";
 function FormulaireProjet({
   onValider,
   onAnnuler,
+  valeursInitiales,
 }: {
   onValider: (nom: string, couleur: string, description: string) => Promise<void>;
   onAnnuler: () => void;
+  valeursInitiales?: Projet;
 }) {
-  const [nom, setNom] = useState("");
-  const [couleur, setCouleur] = useState(COULEURS_PROJET[0]);
-  const [description, setDescription] = useState("");
+  const [nom, setNom] = useState(valeursInitiales?.nom ?? "");
+  const [couleur, setCouleur] = useState(valeursInitiales?.couleur ?? COULEURS_PROJET[0]);
+  const [description, setDescription] = useState(valeursInitiales?.description ?? "");
   const [enCours, setEnCours] = useState(false);
 
   return (
@@ -79,7 +81,7 @@ function FormulaireProjet({
           disabled={enCours || !nom.trim()}
           className="rounded-full bg-airzen-accent px-5 py-2.5 font-semibold text-airzen-primary transition-opacity hover:opacity-90 disabled:opacity-50"
         >
-          {enCours ? "Création…" : "Créer le projet"}
+          {enCours ? "Enregistrement…" : valeursInitiales ? "Enregistrer" : "Créer le projet"}
         </button>
         <button
           type="button"
@@ -220,13 +222,15 @@ const LIBELLE_STATUT: Record<Projet["statut"], string> = {
 };
 
 function GestionProjets() {
-  const { projets, chargement, creer, changerStatut, supprimer } = useProjets();
+  const { projets, chargement, creer, modifier, changerStatut, supprimer } = useProjets();
   const { taches, rattacherAuProjet } = useTaches();
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   // Un seul panneau de rattachement ouvert à la fois (id du projet concerné).
   const [projetPourRattachement, setProjetPourRattachement] = useState<string | null>(
     null,
   );
+  // Édition d'un projet existant (mutuellement exclusif avec le rattachement).
+  const [projetEnEdition, setProjetEnEdition] = useState<Projet | null>(null);
 
   const compteParProjet = useMemo(() => {
     const compte = new Map<string, number>();
@@ -247,6 +251,11 @@ function GestionProjets() {
       (t) =>
         t.projetId !== projetId && !t.tacheParenteId && t.statut !== "annulee",
     );
+  }
+
+  function ouvrirEditionProjet(p: Projet) {
+    setProjetPourRattachement(null);
+    setProjetEnEdition(p);
   }
 
   return (
@@ -288,92 +297,112 @@ function GestionProjets() {
             const compte = compteParProjet.get(p.id) ?? 0;
             return (
               <article key={p.id} className="rounded-2xl bg-white p-4 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <span
-                      className="mt-1 h-4 w-4 shrink-0 rounded-full"
-                      style={{ backgroundColor: p.couleur }}
-                    />
-                    <div>
-                      <h3 className="font-medium text-airzen-primary">{p.nom}</h3>
-                      {p.description && (
-                        <p className="mt-0.5 text-sm font-light text-airzen-secondary">
-                          {p.description}
-                        </p>
-                      )}
-                      <p className="mt-1 text-xs text-airzen-neutral">
-                        {LIBELLE_STATUT[p.statut]} ·{" "}
-                        {compte === 0
-                          ? "aucune tâche en cours"
-                          : `${compte} tâche${compte > 1 ? "s" : ""} en cours`}
-                      </p>
+                {projetEnEdition?.id === p.id ? (
+                  <FormulaireProjet
+                    valeursInitiales={p}
+                    onValider={async (nom, couleur, description) => {
+                      await modifier(p.id, { nom, couleur, description });
+                      setProjetEnEdition(null);
+                    }}
+                    onAnnuler={() => setProjetEnEdition(null)}
+                  />
+                ) : (
+                  <>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span
+                          className="mt-1 h-4 w-4 shrink-0 rounded-full"
+                          style={{ backgroundColor: p.couleur }}
+                        />
+                        <div>
+                          <h3 className="font-medium text-airzen-primary">{p.nom}</h3>
+                          {p.description && (
+                            <p className="mt-0.5 text-sm font-light text-airzen-secondary">
+                              {p.description}
+                            </p>
+                          )}
+                          <p className="mt-1 text-xs text-airzen-neutral">
+                            {LIBELLE_STATUT[p.statut]} ·{" "}
+                            {compte === 0
+                              ? "aucune tâche en cours"
+                              : `${compte} tâche${compte > 1 ? "s" : ""} en cours`}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-                  <Link
-                    href={`/taches?projet=${p.id}`}
-                    className="font-medium text-airzen-secondary hover:text-airzen-primary"
-                  >
-                    Voir les tâches →
-                  </Link>
-                  <Link
-                    href={`/taches?projet=${p.id}&nouvelle=1`}
-                    className="font-medium text-airzen-primary hover:underline"
-                  >
-                    + Nouvelle tâche
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setProjetPourRattachement((actuel) =>
-                        actuel === p.id ? null : p.id,
-                      )
-                    }
-                    className="font-medium text-airzen-primary hover:underline"
-                  >
-                    {projetPourRattachement === p.id
-                      ? "Fermer"
-                      : "+ Tâches existantes"}
-                  </button>
-                  {p.statut === "actif" ? (
-                    <button
-                      type="button"
-                      onClick={() => changerStatut(p.id, "archive")}
-                      className="text-airzen-neutral hover:text-airzen-secondary"
-                    >
-                      Archiver
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => changerStatut(p.id, "actif")}
-                      className="text-airzen-neutral hover:text-airzen-secondary"
-                    >
-                      Réactiver
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => supprimer(p.id)}
-                    className="text-airzen-neutral hover:text-q1"
-                  >
-                    Supprimer
-                  </button>
-                </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+                      <Link
+                        href={`/taches?projet=${p.id}`}
+                        className="font-medium text-airzen-secondary hover:text-airzen-primary"
+                      >
+                        Voir les tâches →
+                      </Link>
+                      <Link
+                        href={`/taches?projet=${p.id}&nouvelle=1`}
+                        className="font-medium text-airzen-primary hover:underline"
+                      >
+                        + Nouvelle tâche
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setProjetPourRattachement((actuel) =>
+                            actuel === p.id ? null : p.id,
+                          )
+                        }
+                        className="font-medium text-airzen-primary hover:underline"
+                      >
+                        {projetPourRattachement === p.id
+                          ? "Fermer"
+                          : "+ Tâches existantes"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => ouvrirEditionProjet(p)}
+                        className="font-medium text-airzen-secondary hover:text-airzen-primary"
+                      >
+                        Modifier
+                      </button>
+                      {p.statut === "actif" ? (
+                        <button
+                          type="button"
+                          onClick={() => changerStatut(p.id, "archive")}
+                          className="text-airzen-neutral hover:text-airzen-secondary"
+                        >
+                          Archiver
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => changerStatut(p.id, "actif")}
+                          className="text-airzen-neutral hover:text-airzen-secondary"
+                        >
+                          Réactiver
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => supprimer(p.id)}
+                        className="text-airzen-neutral hover:text-q1"
+                      >
+                        Supprimer
+                      </button>
+                    </div>
 
-                {projetPourRattachement === p.id && (
-                  <div className="mt-3">
-                    <SelecteurTachesExistantes
-                      candidates={candidatesPour(p.id)}
-                      projetParId={projetParId}
-                      onValider={async (ids) => {
-                        await rattacherAuProjet(ids, p.id);
-                        setProjetPourRattachement(null);
-                      }}
-                      onAnnuler={() => setProjetPourRattachement(null)}
-                    />
-                  </div>
+                    {projetPourRattachement === p.id && (
+                      <div className="mt-3">
+                        <SelecteurTachesExistantes
+                          candidates={candidatesPour(p.id)}
+                          projetParId={projetParId}
+                          onValider={async (ids) => {
+                            await rattacherAuProjet(ids, p.id);
+                            setProjetPourRattachement(null);
+                          }}
+                          onAnnuler={() => setProjetPourRattachement(null)}
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
               </article>
             );

@@ -9,10 +9,16 @@ import { AppShell } from "@/components/AppShell";
 import { FormulaireTache } from "@/components/FormulaireTache";
 import { CarteTache } from "@/components/CarteTache";
 import { ModaleDecoupage, type SousTacheChoisie } from "@/components/ModaleDecoupage";
+import { LegendeQuadrants } from "@/components/LegendeQuadrants";
+import { SelecteurAffichage } from "@/components/SelecteurAffichage";
 import { useAuth } from "@/components/AuthProvider";
 import { useTaches } from "@/lib/hooks/useTaches";
 import { useProjets } from "@/lib/hooks/useProjets";
+import { useModeAffichage } from "@/lib/hooks/useModeAffichage";
 import type { SaisieTache, Tache } from "@/lib/types";
+
+const CLASSES_GRILLE_TUILES =
+  "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 
 function GestionTaches() {
   const { utilisateur } = useAuth();
@@ -28,6 +34,7 @@ function GestionTaches() {
     supprimer,
   } = useTaches();
   const { projets } = useProjets();
+  const { mode, setMode } = useModeAffichage("airzen-affichage-taches");
   const searchParams = useSearchParams();
   const [formulaireOuvert, setFormulaireOuvert] = useState(
     searchParams.get("nouvelle") === "1",
@@ -51,6 +58,13 @@ function GestionTaches() {
   const projetParId = useMemo(
     () => new Map(projets.map((p) => [p.id, p])),
     [projets],
+  );
+
+  // Mode tuiles : la hiérarchie parent/enfant ne peut pas s'indenter dans une
+  // grille, donc chaque sous-tâche affiche plutôt le titre de sa tâche mère.
+  const titreParId = useMemo(
+    () => new Map(taches.map((t) => [t.id, t.titre])),
+    [taches],
   );
 
   function correspondAuFiltre(t: Tache): boolean {
@@ -150,24 +164,30 @@ function GestionTaches() {
         )}
       </div>
 
-      {projets.length > 0 && (
-        <label className="flex items-center gap-2 text-sm text-airzen-secondary">
-          Projet :
-          <select
-            value={filtreProjet}
-            onChange={(e) => setFiltreProjet(e.target.value)}
-            className="rounded-lg border border-airzen-neutral/60 bg-white px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
-          >
-            <option value="tous">Tous</option>
-            <option value="sans">Sans projet</option>
-            {projets.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nom}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-4">
+          {projets.length > 0 && (
+            <label className="flex items-center gap-2 text-sm text-airzen-secondary">
+              Projet :
+              <select
+                value={filtreProjet}
+                onChange={(e) => setFiltreProjet(e.target.value)}
+                className="rounded-lg border border-airzen-neutral/60 bg-white px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
+              >
+                <option value="tous">Tous</option>
+                <option value="sans">Sans projet</option>
+                {projets.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nom}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <LegendeQuadrants />
+        </div>
+        <SelecteurAffichage mode={mode} onChange={setMode} />
+      </div>
 
       {formulaireOuvert && (
         <FormulaireTache
@@ -210,7 +230,7 @@ function GestionTaches() {
             Aucune tâche ici. Ajoutez-en une pour commencer 🌱
           </p>
         </div>
-      ) : (
+      ) : mode === "liste" ? (
         <>
           <div className="flex flex-col gap-3">
             {topLevel.map((t) => {
@@ -270,6 +290,64 @@ function GestionTaches() {
                     onSupprimer={(t) => supprimer(t.id)}
                   />
                 ))}
+            </div>
+          )}
+        </>
+      ) : (
+        // Mode tuiles : hiérarchie aplatie (une sous-tâche affiche le titre
+        // de sa mère au lieu d'une indentation, impossible à rendre en grille).
+        <>
+          <div className={CLASSES_GRILLE_TUILES}>
+            {topLevel.flatMap((t) => [t, ...enfantsDe(t.id)]).map((t) => (
+              <CarteTache
+                key={t.id}
+                tache={t}
+                mode="tuile"
+                projet={projetDe(t)}
+                sousTacheDe={
+                  t.tacheParenteId ? titreParId.get(t.tacheParenteId) : undefined
+                }
+                onModifier={ouvrirEdition}
+                onTerminer={(t) => terminer(t.id)}
+                onSupprimer={(t) => supprimer(t.id)}
+              />
+            ))}
+          </div>
+          {topLevel.length === 0 && terminees.length > 0 && (
+            <p className="text-sm font-light text-airzen-secondary">
+              Tout est fait ici, bravo ✨
+            </p>
+          )}
+
+          {terminees.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => setTerminéesVisibles((v) => !v)}
+                className="self-start text-sm font-medium text-airzen-secondary hover:text-airzen-primary"
+              >
+                {terminéesVisibles
+                  ? "Masquer les tâches terminées"
+                  : `Voir les ${terminees.length} tâche${terminees.length > 1 ? "s" : ""} terminée${terminees.length > 1 ? "s" : ""}`}
+              </button>
+              {terminéesVisibles && (
+                <div className={CLASSES_GRILLE_TUILES}>
+                  {terminees.map((t) => (
+                    <CarteTache
+                      key={t.id}
+                      tache={t}
+                      mode="tuile"
+                      projet={projetDe(t)}
+                      sousTacheDe={
+                        t.tacheParenteId ? titreParId.get(t.tacheParenteId) : undefined
+                      }
+                      onModifier={ouvrirEdition}
+                      onRouvrir={(t) => rouvrir(t.id)}
+                      onSupprimer={(t) => supprimer(t.id)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </>
