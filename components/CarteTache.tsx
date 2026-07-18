@@ -4,11 +4,13 @@
 // (voir docs/04-design-system.md §3). Une bande de couleur pleine sur le bord
 // gauche rend le quadrant Eisenhower reconnaissable d'un coup d'œil, en plus
 // du badge (voir components/BadgeQuadrant.tsx et LegendeQuadrants.tsx).
+// Le titre est cliquable pour ouvrir directement l'édition (si onModifier fourni).
 import type { Tache } from "@/lib/types";
 import { BadgeQuadrant } from "@/components/BadgeQuadrant";
 import { QUADRANTS } from "@/lib/eisenhower";
 import { libelleNiveau } from "@/lib/energie";
 import { formatDuree, formatEcheance, tsEnDate } from "@/lib/format";
+import { IconeCloche, IconeCoche, IconeCorbeille, IconeCrayon, IconeRouvrir } from "@/components/icones";
 
 interface CarteTacheProps {
   tache: Tache;
@@ -22,6 +24,9 @@ interface CarteTacheProps {
   onRouvrir?: (t: Tache) => void;
   onSupprimer?: (t: Tache) => void;
 }
+
+const CLASSE_BOUTON_ICONE =
+  "rounded-full p-1.5 transition-colors hover:bg-airzen-bg shrink-0";
 
 export function CarteTache({
   tache,
@@ -40,26 +45,25 @@ export function CarteTache({
   const couleurQuadrant = QUADRANTS[tache.quadrantEisenhower].couleur;
   const tuile = mode === "tuile";
 
-  const meta = (
-    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-airzen-secondary">
-      <BadgeQuadrant quadrant={tache.quadrantEisenhower} />
-      <span>{formatDuree(tache.dureeEstimeeMinutes)}</span>
-      <span title="Énergie requise">
-        énergie {libelleNiveau(tache.niveauEnergieRequis).toLowerCase()}
-      </span>
-      {echeance && <span>échéance {echeance}</span>}
-      {tache.recurrenceRegle && (
-        <span title="Tâche récurrente" aria-label="Tâche récurrente">
-          ↻ récurrente
-        </span>
-      )}
-      {projet && (
-        <span className="inline-flex items-center gap-1.5" title={`Projet : ${projet.nom}`}>
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: projet.couleur }} />
-          {projet.nom}
-        </span>
-      )}
-    </div>
+  const titre = onModifier ? (
+    <button
+      type="button"
+      onClick={() => onModifier(tache)}
+      className={`block truncate text-left font-medium text-airzen-primary hover:underline ${
+        terminee ? "line-through" : ""
+      } ${tuile ? "text-sm" : ""}`}
+      title="Modifier"
+    >
+      {tache.titre}
+    </button>
+  ) : (
+    <p
+      className={`truncate font-medium text-airzen-primary ${terminee ? "line-through" : ""} ${
+        tuile ? "text-sm" : ""
+      }`}
+    >
+      {tache.titre}
+    </p>
   );
 
   const actions = (
@@ -68,76 +72,137 @@ export function CarteTache({
         <button
           type="button"
           onClick={() => onModifier(tache)}
-          className="rounded-full bg-airzen-bg px-3 py-1.5 text-xs font-medium text-airzen-secondary transition-colors hover:bg-airzen-neutral/30"
+          aria-label="Modifier"
+          title="Modifier"
+          className={`${CLASSE_BOUTON_ICONE} text-airzen-secondary`}
         >
-          Modifier
+          <IconeCrayon />
         </button>
       )}
       {!terminee && onTerminer && (
         <button
           type="button"
           onClick={() => onTerminer(tache)}
-          className="rounded-full bg-airzen-bg px-3 py-1.5 text-xs font-medium text-airzen-primary transition-colors hover:bg-airzen-neutral/30"
+          aria-label="Terminer"
+          title="Terminer"
+          className={`${CLASSE_BOUTON_ICONE} text-airzen-primary`}
         >
-          Terminer
+          <IconeCoche />
         </button>
       )}
       {terminee && onRouvrir && (
         <button
           type="button"
           onClick={() => onRouvrir(tache)}
-          className="rounded-full bg-airzen-bg px-3 py-1.5 text-xs font-medium text-airzen-secondary transition-colors hover:bg-airzen-neutral/30"
+          aria-label="Rouvrir"
+          title="Rouvrir"
+          className={`${CLASSE_BOUTON_ICONE} text-airzen-secondary`}
         >
-          Rouvrir
+          <IconeRouvrir />
         </button>
       )}
       {onSupprimer && (
         <button
           type="button"
           onClick={() => onSupprimer(tache)}
-          className="text-xs text-airzen-neutral transition-colors hover:text-q1"
+          aria-label="Supprimer"
+          title="Supprimer"
+          className={`${CLASSE_BOUTON_ICONE} text-airzen-neutral hover:bg-q1/10 hover:text-q1`}
         >
-          Supprimer
+          <IconeCorbeille />
         </button>
       )}
     </>
   );
 
-  return (
-    <article
-      className={`flex rounded-2xl bg-white shadow-sm transition-opacity ${
-        attenue || terminee ? "opacity-60" : ""
-      } ${tuile ? "h-full flex-col" : ""}`}
-      style={{ borderLeft: `4px solid ${couleurQuadrant}` }}
-    >
-      <div className={tuile ? "flex-1 p-4" : "flex flex-1 items-start justify-between gap-3 p-4"}>
-        <div className="min-w-0">
+  if (tuile) {
+    return (
+      <article
+        className={`flex aspect-square flex-col rounded-2xl bg-white p-3 shadow-sm transition-opacity ${
+          attenue || terminee ? "opacity-60" : ""
+        }`}
+        style={{ borderLeft: `4px solid ${couleurQuadrant}` }}
+      >
+        <div className="min-w-0 flex-1 overflow-hidden">
           {sousTacheDe && (
-            <p className="mb-0.5 text-xs font-light text-airzen-neutral">
-              ↳ sous-tâche de « {sousTacheDe} »
+            <p className="mb-0.5 truncate text-[11px] font-light text-airzen-neutral">
+              ↳ {sousTacheDe}
             </p>
           )}
-          <h3
-            className={`font-medium text-airzen-primary ${terminee ? "line-through" : ""}`}
-          >
-            {tache.titre}
-          </h3>
-          {meta}
-          {raison && (
-            <p className="mt-2 text-xs font-light text-airzen-secondary">{raison}</p>
+          {titre}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <BadgeQuadrant quadrant={tache.quadrantEisenhower} avecLabel={false} />
+            {tache.recurrenceRegle && (
+              <span title="Tâche récurrente" className="text-xs text-airzen-neutral">
+                ↻
+              </span>
+            )}
+            {tache.rappel && (
+              <span title="Rappel activé" className="text-airzen-neutral">
+                <IconeCloche className="h-3 w-3" />
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-[11px] text-airzen-secondary">
+            {formatDuree(tache.dureeEstimeeMinutes)}
+            {echeance ? ` · ${echeance}` : ""}
+          </p>
+          {projet && (
+            <p
+              className="mt-1 truncate text-[11px] text-airzen-secondary"
+              title={`Projet : ${projet.nom}`}
+            >
+              <span
+                className="mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle"
+                style={{ backgroundColor: projet.couleur }}
+              />
+              {projet.nom}
+            </p>
           )}
         </div>
-
-        {!tuile && (
-          <div className="flex shrink-0 flex-col items-end gap-2">{actions}</div>
-        )}
-      </div>
-
-      {tuile && (
-        <div className="flex flex-wrap items-center gap-2 border-t border-airzen-neutral/20 p-3">
+        <div className="mt-2 flex items-center justify-end gap-0.5 border-t border-airzen-neutral/20 pt-1.5">
           {actions}
         </div>
-      )}
+      </article>
+    );
+  }
+
+  return (
+    <article
+      className={`flex items-center gap-2 rounded-xl bg-white py-2 pl-3 pr-1.5 shadow-sm transition-opacity ${
+        attenue || terminee ? "opacity-60" : ""
+      }`}
+      style={{ borderLeft: `4px solid ${couleurQuadrant}` }}
+    >
+      <div className="min-w-0 flex-1">
+        {sousTacheDe && (
+          <p className="truncate text-[11px] font-light text-airzen-neutral">
+            ↳ sous-tâche de « {sousTacheDe} »
+          </p>
+        )}
+        {titre}
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-airzen-secondary">
+          <BadgeQuadrant quadrant={tache.quadrantEisenhower} avecLabel={false} />
+          <span>{formatDuree(tache.dureeEstimeeMinutes)}</span>
+          <span title="Énergie requise">{libelleNiveau(tache.niveauEnergieRequis).toLowerCase()}</span>
+          {echeance && <span>{echeance}</span>}
+          {tache.recurrenceRegle && <span title="Tâche récurrente">↻</span>}
+          {tache.rappel && (
+            <span title="Rappel activé" className="inline-flex text-airzen-neutral">
+              <IconeCloche className="h-3 w-3" />
+            </span>
+          )}
+          {projet && (
+            <span className="inline-flex items-center gap-1.5" title={`Projet : ${projet.nom}`}>
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: projet.couleur }} />
+              {projet.nom}
+            </span>
+          )}
+        </div>
+        {raison && <p className="mt-1 text-xs font-light text-airzen-secondary">{raison}</p>}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-0.5">{actions}</div>
     </article>
   );
 }

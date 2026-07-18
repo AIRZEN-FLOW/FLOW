@@ -42,6 +42,7 @@ export async function creerTache(
     quadrantEisenhower: quadrantPourSaisie(saisie, seuilJours),
     tags: saisie.tags ?? [],
     source: saisie.source ?? "manuelle",
+    rappel: saisie.rappel ?? false,
     recurrenceRegle: saisie.recurrenceRegle
       ? {
           frequence: saisie.recurrenceRegle.frequence,
@@ -95,6 +96,7 @@ export async function majTache(
     tags: saisie.tags ?? [],
     projetId: saisie.projetId ?? null,
     tacheParenteId: saisie.tacheParenteId ?? null,
+    rappel: saisie.rappel ?? false,
     modifieLe: serverTimestamp(),
   });
 }

@@ -17,8 +17,7 @@ import { useProjets } from "@/lib/hooks/useProjets";
 import { useModeAffichage } from "@/lib/hooks/useModeAffichage";
 import type { SaisieTache, Tache } from "@/lib/types";
 
-const CLASSES_GRILLE_TUILES =
-  "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+const CLASSES_GRILLE_TUILES = "grid grid-cols-2 gap-3 sm:grid-cols-3";
 
 function GestionTaches() {
   const { utilisateur } = useAuth();

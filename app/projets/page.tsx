@@ -314,8 +314,15 @@ function GestionProjets() {
                           className="mt-1 h-4 w-4 shrink-0 rounded-full"
                           style={{ backgroundColor: p.couleur }}
                         />
-                        <div>
-                          <h3 className="font-medium text-airzen-primary">{p.nom}</h3>
+                        <div className="min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => ouvrirEditionProjet(p)}
+                            className="truncate text-left font-medium text-airzen-primary hover:underline"
+                            title="Modifier"
+                          >
+                            {p.nom}
+                          </button>
                           {p.description && (
                             <p className="mt-0.5 text-sm font-light text-airzen-secondary">
                               {p.description}
@@ -355,13 +362,6 @@ function GestionProjets() {
                         {projetPourRattachement === p.id
                           ? "Fermer"
                           : "+ Tâches existantes"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => ouvrirEditionProjet(p)}
-                        className="font-medium text-airzen-secondary hover:text-airzen-primary"
-                      >
-                        Modifier
                       </button>
                       {p.statut === "actif" ? (
                         <button

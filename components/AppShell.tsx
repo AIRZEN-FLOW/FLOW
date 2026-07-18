@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { LogoAirZen } from "@/components/LogoAirZen";
+import { GestionnaireRappels } from "@/components/GestionnaireRappels";
 
 interface LienNav {
   href: string;
@@ -16,6 +17,7 @@ interface LienNav {
 const NAVIGATION: LienNav[] = [
   { href: "/", label: "Aujourd'hui" },
   { href: "/taches", label: "Tâches" },
+  { href: "/priorites", label: "Priorités" },
   { href: "/planning", label: "Planning" },
   { href: "/projets", label: "Projets" },
   { href: "/parametres", label: "Réglages" },
@@ -76,6 +78,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-6">{children}</main>
+      <GestionnaireRappels />
     </div>
   );
 }

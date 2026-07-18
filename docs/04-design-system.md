@@ -12,17 +12,15 @@
 | Blanc | `#FFFFFF` | Fond principal |
 | Fond doux | `#F5F7F8` | Fond d'écran général, pour éviter le blanc pur trop clinique |
 
-### Couleurs additionnelles pour les quadrants Eisenhower
-*(à ajouter, car la charte de base ne couvre pas ce besoin — choisies pour rester dans l'esprit doux de la palette, jamais criardes)*
+### Couleurs des quadrants Eisenhower
+*(validées par Rosenn — exclusivement des couleurs déjà présentes dans la charte, aucune couleur inventée)*
 
-| Quadrant | Couleur suggérée | Logique |
+| Quadrant | Couleur | Logique |
 |---|---|---|
-| Q1 — Faire maintenant | `#C97064` (terracotta doux) | Attire l'attention sans être un rouge alarmant |
-| Q2 — Planifier | `#76939D` (bleu-vert de la charte) | Valorisé visuellement, car c'est le quadrant le plus important pédagogiquement |
-| Q3 — Déléguer/minimiser | `#B3BEC4` (gris clair de la charte) | Discret |
-| Q4 — Éliminer/différer | `#D9D9D9` (gris très clair, hors charte) | Quasi invisible, volontairement en retrait |
-
-> À valider avec Rosenn lors de la maquette réelle — ce sont des propositions cohérentes avec la palette existante, pas des couleurs déjà validées par la marque.
+| Q1 — Faire maintenant | `#C97064` (terracotta/corail) | Attire l'attention sans être un rouge alarmant |
+| Q2 — Planifier | `#EDC426` (jaune, accent de la charte) | Valorisé visuellement, car c'est le quadrant le plus important pédagogiquement (important, pas urgent) |
+| Q3 — Déléguer/minimiser | `#76939D` (bleu-vert, secondaire de la charte) | Présent mais discret (urgent, pas important) |
+| Q4 — Éliminer/différer | `#B3BEC4` (gris clair, neutre de la charte) | Quasi invisible, volontairement en retrait |
 
 ### Typographie
 - **Police unique** : Montserrat (toutes graisses : 300 à 800 selon besoin), cohérente avec tous les supports AIR ZEN existants.

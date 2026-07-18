@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
+import { CelebrationProvider } from "@/components/CelebrationProvider";
 import { EnregistrementSW } from "@/components/EnregistrementSW";
 
 // Montserrat : police unique de la marque AIR ZEN (voir 04-design-system.md)
@@ -35,7 +36,9 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${montserrat.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <CelebrationProvider>{children}</CelebrationProvider>
+        </AuthProvider>
         <EnregistrementSW />
       </body>
     </html>

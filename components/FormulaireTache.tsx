@@ -133,6 +133,8 @@ export function FormulaireTache({
   const [finRecurrence, setFinRecurrence] = useState(
     dateEnValeurInput(tsEnDate(init?.recurrenceRegle?.dateFin ?? null)),
   );
+  // Étape "rappels" — notification navigateur le jour de l'échéance.
+  const [rappel, setRappel] = useState(init?.rappel ?? false);
 
   function basculerJour(jour: Jour) {
     setJoursConcernes((prev) =>
@@ -156,6 +158,7 @@ export function FormulaireTache({
         .filter(Boolean),
       projetId: projetId || null,
       tacheParenteId: parenteId || null,
+      rappel: echeance ? rappel : false,
       recurrenceRegle:
         frequence === "aucune"
           ? null
@@ -225,6 +228,17 @@ export function FormulaireTache({
           onChange={(e) => setEcheance(e.target.value)}
           className="w-fit rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
         />
+        {echeance && (
+          <label className="mt-1.5 flex items-center gap-2 text-sm text-airzen-secondary">
+            <input
+              type="checkbox"
+              checked={rappel}
+              onChange={(e) => setRappel(e.target.checked)}
+              className="h-4 w-4 accent-airzen-primary"
+            />
+            🔔 Me rappeler à l&apos;échéance (notification, app ouverte)
+          </label>
+        )}
       </Champ>
 
       <button

@@ -106,6 +106,64 @@ function SectionGoogleAgenda() {
   );
 }
 
+// Rappels — permission de notification navigateur (voir lib/hooks/useRappels.ts).
+function SectionNotifications() {
+  const [permission, setPermission] = useState<NotificationPermission | "indisponible">(
+    () =>
+      typeof window !== "undefined" && "Notification" in window
+        ? Notification.permission
+        : "indisponible",
+  );
+  const [demande, setDemande] = useState(false);
+
+  async function activer() {
+    setDemande(true);
+    try {
+      const resultat = await Notification.requestPermission();
+      setPermission(resultat);
+    } finally {
+      setDemande(false);
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
+      <h2 className="font-semibold text-airzen-primary">Notifications de rappel</h2>
+      <p className="text-sm font-light text-airzen-secondary">
+        Pour les tâches où vous avez coché « Me rappeler à l&apos;échéance », une
+        notification s&apos;affiche le jour où la tâche arrive à échéance —
+        uniquement pendant que l&apos;app est ouverte (pas de réveil si elle est
+        totalement fermée, c&apos;est une limite du web sans serveur dédié).
+      </p>
+
+      {permission === "indisponible" && (
+        <p className="text-sm text-airzen-neutral">
+          Les notifications ne sont pas prises en charge par ce navigateur.
+        </p>
+      )}
+      {permission === "granted" && (
+        <p className="text-sm font-medium text-airzen-primary">Activées ✓</p>
+      )}
+      {permission === "denied" && (
+        <p className="text-sm text-airzen-secondary">
+          Bloquées par le navigateur. Pour les réactiver, changez l&apos;autorisation
+          « Notifications » de ce site dans les réglages de votre navigateur.
+        </p>
+      )}
+      {permission === "default" && (
+        <button
+          type="button"
+          onClick={activer}
+          disabled={demande}
+          className="mt-1 self-start rounded-full border border-airzen-neutral/60 px-4 py-2 text-sm font-medium text-airzen-primary transition-colors hover:bg-airzen-bg disabled:opacity-50"
+        >
+          {demande ? "Un instant…" : "Activer les notifications"}
+        </button>
+      )}
+    </section>
+  );
+}
+
 function Reglages() {
   const { user, utilisateur, profilsEnergie, rafraichir } = useAuth();
   // Copie locale éditable (initialisée depuis le profil déjà chargé par l'auth).
@@ -201,6 +259,8 @@ function Reglages() {
       </section>
 
       <SectionGoogleAgenda />
+
+      <SectionNotifications />
 
       <section className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
         <h2 className="font-semibold text-airzen-primary">Seuil d&apos;urgence</h2>

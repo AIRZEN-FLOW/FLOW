@@ -10,7 +10,9 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
 import { BandeauEnergie } from "@/components/BandeauEnergie";
 import { CarteTache } from "@/components/CarteTache";
+import { FormulaireTache } from "@/components/FormulaireTache";
 import { useTaches } from "@/lib/hooks/useTaches";
+import { useProjets } from "@/lib/hooks/useProjets";
 import { useEnergieMoment } from "@/lib/hooks/useEnergieMoment";
 import {
   minutesAvantProchaineOccupation,
@@ -18,6 +20,7 @@ import {
 } from "@/lib/hooks/useOccupations";
 import { calculerSuggestions, type TempsDisponible } from "@/lib/matching";
 import { tsEnDate } from "@/lib/format";
+import type { SaisieTache, Tache } from "@/lib/types";
 
 const OPTIONS_TEMPS: { valeur: TempsDisponible; label: string }[] = [
   { valeur: 15, label: "15 min" },
@@ -31,12 +34,37 @@ function heureCourte(d: Date): string {
 }
 
 function EcranAujourdhui() {
-  const { taches, chargement, terminer } = useTaches();
+  const { taches, chargement, modifier, terminer } = useTaches();
+  const { projets } = useProjets();
   const { energieEffective, ajustementManuel, definirOverride, reinitialiser } =
     useEnergieMoment();
   const { occupations, connecte } = useOccupations();
   // Choix manuel (prioritaire) ; null = suivre l'agenda (ou 30 min par défaut).
   const [tempsChoisi, setTempsChoisi] = useState<TempsDisponible | null>(null);
+  const [tacheEnEdition, setTacheEnEdition] = useState<Tache | null>(null);
+  const [enregistrement, setEnregistrement] = useState(false);
+  const [maintenant] = useState(() => new Date());
+
+  // Petite reconnaissance douce : tâches accomplies au cours des 7 derniers jours.
+  const termineesCetteSemaine = useMemo(() => {
+    const ilYA7Jours = maintenant.getTime() - 7 * 24 * 60 * 60 * 1000;
+    return taches.filter((t) => {
+      if (t.statut !== "terminee") return false;
+      const mod = tsEnDate(t.modifieLe ?? null);
+      return mod ? mod.getTime() >= ilYA7Jours : false;
+    }).length;
+  }, [taches, maintenant]);
+
+  async function enregistrerModification(saisie: SaisieTache) {
+    if (!tacheEnEdition) return;
+    setEnregistrement(true);
+    try {
+      await modifier(tacheEnEdition.id, saisie);
+      setTacheEnEdition(null);
+    } finally {
+      setEnregistrement(false);
+    }
+  }
 
   // Temps déduit de l'agenda : minutes avant le prochain rendez-vous.
   const agenda = useMemo(() => {
@@ -66,7 +94,28 @@ function EcranAujourdhui() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-2xl font-bold text-airzen-primary">Aujourd&apos;hui</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-airzen-primary">Aujourd&apos;hui</h1>
+        {termineesCetteSemaine > 0 && (
+          <p className="mt-1 text-sm font-light text-airzen-secondary">
+            😊 {termineesCetteSemaine} tâche{termineesCetteSemaine > 1 ? "s" : ""} accomplie
+            {termineesCetteSemaine > 1 ? "s" : ""} cette semaine
+          </p>
+        )}
+      </div>
+
+      {tacheEnEdition && (
+        <FormulaireTache
+          valeursInitiales={tacheEnEdition}
+          onValider={enregistrerModification}
+          onAnnuler={() => setTacheEnEdition(null)}
+          enCours={enregistrement}
+          projets={projets}
+          tachesParentes={taches.filter(
+            (t) => !t.tacheParenteId && t.id !== tacheEnEdition.id,
+          )}
+        />
+      )}
 
       <BandeauEnergie
         energieEffective={energieEffective}
@@ -157,6 +206,7 @@ function EcranAujourdhui() {
               tache={s.tache}
               raison={s.raison}
               attenue={s.secondPlan}
+              onModifier={setTacheEnEdition}
               onTerminer={(t) => terminer(t.id)}
             />
           ))

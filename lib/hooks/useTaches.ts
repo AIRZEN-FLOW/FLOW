@@ -4,6 +4,7 @@
 // Charge la liste et expose les mutations (créer, terminer, rouvrir, supprimer).
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { useCelebration } from "@/components/CelebrationProvider";
 import type { SaisieTache, StatutTache, Tache } from "@/lib/types";
 import {
   assignerProjetTache,
@@ -19,6 +20,7 @@ import { occurrenceSuivante } from "@/lib/recurrence";
 
 export function useTaches() {
   const { user, utilisateur } = useAuth();
+  const { celebrer } = useCelebration();
   const [taches, setTaches] = useState<Tache[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -138,6 +140,7 @@ export function useTaches() {
     async (id: string) => {
       const tache = taches.find((t) => t.id === id);
       await changerStatut(id, "terminee");
+      celebrer(); // petite reconnaissance à chaque tâche accomplie
       if (!user || !tache?.recurrenceRegle) return;
       const suivante = occurrenceSuivante(tache);
       if (!suivante) return;
@@ -163,7 +166,7 @@ export function useTaches() {
       );
       await recharger();
     },
-    [taches, user, seuilJours, changerStatut, recharger],
+    [taches, user, seuilJours, changerStatut, recharger, celebrer],
   );
 
   const supprimer = useCallback(async (id: string) => {

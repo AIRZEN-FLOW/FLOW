@@ -80,6 +80,8 @@ export interface Tache {
   tags: string[];
   source: SourceTache;
   recurrenceRegle?: RecurrenceRegle | null;
+  /** Rappel (notification navigateur) à activer le jour de l'échéance. Défaut false. */
+  rappel?: boolean;
   creeLe?: Timestamp;
   modifieLe?: Timestamp;
 }
@@ -96,6 +98,7 @@ export interface SaisieTache {
   projetId?: string | null;
   tacheParenteId?: string | null;
   source?: SourceTache;
+  rappel?: boolean;
   recurrenceRegle?: {
     frequence: "quotidienne" | "hebdomadaire" | "mensuelle";
     joursConcernes?: Jour[];

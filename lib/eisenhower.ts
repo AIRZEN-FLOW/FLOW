@@ -59,13 +59,22 @@ export function calculerQuadrant(
   return "q4";
 }
 
-/** Libellés et couleurs des quadrants (charte docs/04-design-system.md). */
+/**
+ * Libellés et couleurs des quadrants (charte docs/04-design-system.md).
+ * Choisies exclusivement parmi les couleurs de la charte AIR ZEN, chacune
+ * associée à ce qu'elle signifie pour la décision :
+ *   Q1 urgent + important        → corail  (alerte douce, sans être alarmante)
+ *   Q2 important, moins urgent   → jaune   (l'accent de la marque — le travail
+ *                                            de fond mis en valeur, pas relégué)
+ *   Q3 peu important, urgent     → bleu-vert (secondaire — présent mais discret)
+ *   Q4 peu important, peu urgent → gris clair (neutre — quasi invisible)
+ */
 export const QUADRANTS: Record<
   Quadrant,
   { label: string; court: string; couleur: string }
 > = {
   q1: { label: "Faire maintenant", court: "Q1", couleur: "#C97064" },
-  q2: { label: "Planifier", court: "Q2", couleur: "#76939D" },
-  q3: { label: "Déléguer ou minimiser", court: "Q3", couleur: "#B3BEC4" },
-  q4: { label: "Éliminer ou différer", court: "Q4", couleur: "#D9D9D9" },
+  q2: { label: "Planifier", court: "Q2", couleur: "#EDC426" },
+  q3: { label: "Déléguer ou minimiser", court: "Q3", couleur: "#76939D" },
+  q4: { label: "Éliminer ou différer", court: "Q4", couleur: "#B3BEC4" },
 };
