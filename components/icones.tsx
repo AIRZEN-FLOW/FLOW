@@ -71,3 +71,38 @@ export function IconeCloche({ className = "h-4 w-4" }: PropsIcone) {
     </svg>
   );
 }
+
+/** Durée estimée — utilisée en remplacement du mot "min"/"h" quand la place manque. */
+export function IconeHorloge({ className = "h-4 w-4" }: PropsIcone) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 8v4.5l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** Énergie requise — utilisée en remplacement du mot "Haute/Moyenne/Basse". */
+export function IconeEclair({ className = "h-4 w-4" }: PropsIcone) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M13 3 5 13.5h5.5L11 21l8-10.5h-5.5Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Échéance — utilisée en remplacement du texte "dans X jours". */
+export function IconeCalendrier({ className = "h-4 w-4" }: PropsIcone) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="4" y="5.5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M4 10h16M8 3.5v3M16 3.5v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}

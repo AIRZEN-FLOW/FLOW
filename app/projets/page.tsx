@@ -245,11 +245,15 @@ function GestionProjets() {
   const projetParId = useMemo(() => new Map(projets.map((p) => [p.id, p])), [projets]);
 
   // Tâches candidates au rattachement : tout sauf celles déjà dans CE projet,
-  // et hors sous-tâches (elles suivent leur tâche mère) et tâches annulées.
+  // et hors sous-tâches (elles suivent leur tâche mère), tâches annulées et
+  // tâches déjà terminées (rien à faire d'utile en les rattachant).
   function candidatesPour(projetId: string): Tache[] {
     return taches.filter(
       (t) =>
-        t.projetId !== projetId && !t.tacheParenteId && t.statut !== "annulee",
+        t.projetId !== projetId &&
+        !t.tacheParenteId &&
+        t.statut !== "annulee" &&
+        t.statut !== "terminee",
     );
   }
 

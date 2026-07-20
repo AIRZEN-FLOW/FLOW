@@ -3,6 +3,7 @@
 // Étape 3 + 5 — Gestion des tâches : création, liste, quadrant, terminer,
 // rattachement à un projet, sous-tâches (tâche parente) et filtre par projet.
 import { Suspense, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
@@ -39,7 +40,6 @@ function GestionTaches() {
     creerAvecSousTaches,
     modifier,
     terminer,
-    rouvrir,
     supprimer,
   } = useTaches();
   const { projets } = useProjets();
@@ -49,7 +49,6 @@ function GestionTaches() {
     searchParams.get("nouvelle") === "1",
   );
   const [enregistrement, setEnregistrement] = useState(false);
-  const [terminéesVisibles, setTerminéesVisibles] = useState(false);
   // Étape 6 — saisie en attente de décision de découpage (tâche > seuil).
   const [saisieADecouper, setSaisieADecouper] = useState<SaisieTache | null>(null);
   // Édition d'une tâche existante (mutuellement exclusif avec la création).
@@ -201,6 +200,14 @@ function GestionTaches() {
             </label>
           )}
           <LegendeQuadrants />
+          {terminees.length > 0 && (
+            <Link
+              href="/terminees"
+              className="text-sm font-medium text-airzen-secondary hover:text-airzen-primary"
+            >
+              Tâches terminées ({terminees.length}) →
+            </Link>
+          )}
         </div>
         <SelecteurAffichage mode={mode} onChange={setMode} />
       </div>
@@ -247,68 +254,41 @@ function GestionTaches() {
           </p>
         </div>
       ) : mode === "liste" ? (
-        <>
-          <div className="flex flex-col gap-3">
-            {topLevel.map((t) => {
-              const enfants = enfantsDe(t.id);
-              return (
-                <div key={t.id} className="flex flex-col gap-2">
-                  <CarteTache
-                    tache={t}
-                    projet={projetDe(t)}
-                    onModifier={ouvrirEdition}
-                    onTerminer={(t) => terminer(t.id)}
-                    onSupprimer={(t) => supprimer(t.id)}
-                  />
-                  {enfants.length > 0 && (
-                    <div className="ml-4 flex flex-col gap-2 border-l-2 border-airzen-neutral/30 pl-4">
-                      {enfants.map((s) => (
-                        <CarteTache
-                          key={s.id}
-                          tache={s}
-                          projet={projetDe(s)}
-                          onModifier={ouvrirEdition}
-                          onTerminer={(s) => terminer(s.id)}
-                          onSupprimer={(s) => supprimer(s.id)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            {topLevel.length === 0 && terminees.length > 0 && (
-              <p className="text-sm font-light text-airzen-secondary">
-                Tout est fait ici, bravo ✨
-              </p>
-            )}
-          </div>
-
-          {terminees.length > 0 && (
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={() => setTerminéesVisibles((v) => !v)}
-                className="self-start text-sm font-medium text-airzen-secondary hover:text-airzen-primary"
-              >
-                {terminéesVisibles
-                  ? "Masquer les tâches terminées"
-                  : `Voir les ${terminees.length} tâche${terminees.length > 1 ? "s" : ""} terminée${terminees.length > 1 ? "s" : ""}`}
-              </button>
-              {terminéesVisibles &&
-                terminees.map((t) => (
-                  <CarteTache
-                    key={t.id}
-                    tache={t}
-                    projet={projetDe(t)}
-                    onModifier={ouvrirEdition}
-                    onRouvrir={(t) => rouvrir(t.id)}
-                    onSupprimer={(t) => supprimer(t.id)}
-                  />
-                ))}
-            </div>
+        <div className="flex flex-col gap-3">
+          {topLevel.map((t) => {
+            const enfants = enfantsDe(t.id);
+            return (
+              <div key={t.id} className="flex flex-col gap-2">
+                <CarteTache
+                  tache={t}
+                  projet={projetDe(t)}
+                  onModifier={ouvrirEdition}
+                  onTerminer={(t) => terminer(t.id)}
+                  onSupprimer={(t) => supprimer(t.id)}
+                />
+                {enfants.length > 0 && (
+                  <div className="ml-4 flex flex-col gap-2 border-l-2 border-airzen-neutral/30 pl-4">
+                    {enfants.map((s) => (
+                      <CarteTache
+                        key={s.id}
+                        tache={s}
+                        projet={projetDe(s)}
+                        onModifier={ouvrirEdition}
+                        onTerminer={(s) => terminer(s.id)}
+                        onSupprimer={(s) => supprimer(s.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {topLevel.length === 0 && terminees.length > 0 && (
+            <p className="text-sm font-light text-airzen-secondary">
+              Tout est fait ici, bravo ✨
+            </p>
           )}
-        </>
+        </div>
       ) : mode === "tuile" ? (
         // Mode tuiles : hiérarchie aplatie (une sous-tâche affiche le titre
         // de sa mère au lieu d'une indentation, impossible à rendre en grille).
@@ -333,38 +313,6 @@ function GestionTaches() {
             <p className="text-sm font-light text-airzen-secondary">
               Tout est fait ici, bravo ✨
             </p>
-          )}
-
-          {terminees.length > 0 && (
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={() => setTerminéesVisibles((v) => !v)}
-                className="self-start text-sm font-medium text-airzen-secondary hover:text-airzen-primary"
-              >
-                {terminéesVisibles
-                  ? "Masquer les tâches terminées"
-                  : `Voir les ${terminees.length} tâche${terminees.length > 1 ? "s" : ""} terminée${terminees.length > 1 ? "s" : ""}`}
-              </button>
-              {terminéesVisibles && (
-                <div className={CLASSES_GRILLE_TUILES}>
-                  {terminees.map((t) => (
-                    <CarteTache
-                      key={t.id}
-                      tache={t}
-                      mode="tuile"
-                      projet={projetDe(t)}
-                      sousTacheDe={
-                        t.tacheParenteId ? titreParId.get(t.tacheParenteId) : undefined
-                      }
-                      onModifier={ouvrirEdition}
-                      onRouvrir={(t) => rouvrir(t.id)}
-                      onSupprimer={(t) => supprimer(t.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
           )}
         </>
       ) : (

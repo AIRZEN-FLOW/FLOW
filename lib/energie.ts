@@ -25,6 +25,17 @@ export function libelleNiveau(niveau: NiveauEnergie): string {
   return LIBELLES_NIVEAU[niveau];
 }
 
+const ABREV_NIVEAU: Record<NiveauEnergie, string> = {
+  haute: "H",
+  moyenne: "M",
+  basse: "B",
+};
+
+/** Abréviation d'une lettre, pour les espaces très étroits (avec title complet à côté). */
+export function abregeNiveau(niveau: NiveauEnergie): string {
+  return ABREV_NIVEAU[niveau];
+}
+
 /** Renvoie le jour de la semaine (minuscule) correspondant à une date. */
 export function jourDeLaSemaine(date: Date): Jour {
   // getDay(): 0 = dimanche, 1 = lundi, ...

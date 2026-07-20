@@ -10,6 +10,7 @@ import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/components/AuthProvider";
 import { MessageFinJournee } from "@/components/MessageFinJournee";
 import { useTaches } from "@/lib/hooks/useTaches";
+import { useHorloge } from "@/lib/hooks/useHorloge";
 import { useOccupations, type Occupation } from "@/lib/hooks/useOccupations";
 import { deduireEnergieMoment } from "@/lib/energie";
 import { calculerSuggestions } from "@/lib/matching";
@@ -61,7 +62,7 @@ function PagePlanningContenu() {
   const { taches, chargement } = useTaches();
   const { occupations, connecte } = useOccupations();
   const [voirQuandMeme, setVoirQuandMeme] = useState(false);
-  const [maintenant] = useState(() => new Date());
+  const maintenant = useHorloge();
 
   // Même réglage "Fin de journée" que sur l'écran Aujourd'hui, même message.
   const journeeTerminee = useMemo(() => {

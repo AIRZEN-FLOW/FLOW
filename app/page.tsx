@@ -17,6 +17,7 @@ import { FormulaireTache } from "@/components/FormulaireTache";
 import { useTaches } from "@/lib/hooks/useTaches";
 import { useProjets } from "@/lib/hooks/useProjets";
 import { useEnergieMoment } from "@/lib/hooks/useEnergieMoment";
+import { useHorloge } from "@/lib/hooks/useHorloge";
 import {
   minutesAvantProchaineOccupation,
   useOccupations,
@@ -47,7 +48,7 @@ function EcranAujourdhui() {
   const [tempsChoisi, setTempsChoisi] = useState<TempsDisponible | null>(null);
   const [tacheEnEdition, setTacheEnEdition] = useState<Tache | null>(null);
   const [enregistrement, setEnregistrement] = useState(false);
-  const [maintenant] = useState(() => new Date());
+  const maintenant = useHorloge();
   const [voirQuandMeme, setVoirQuandMeme] = useState(false);
 
   // Fin de journée choisie dans Réglages (défaut 19h) : passé cette heure,
@@ -125,6 +126,21 @@ function EcranAujourdhui() {
       </div>
 
       <EnTeteAccueil prenom={prenom} maintenant={maintenant} />
+
+      <div className="flex flex-wrap gap-x-5 gap-y-1">
+        <Link
+          href="/taches"
+          className="text-sm font-medium text-airzen-secondary hover:text-airzen-primary"
+        >
+          Gérer toutes mes tâches →
+        </Link>
+        <Link
+          href="/planning"
+          className="text-sm font-medium text-airzen-secondary hover:text-airzen-primary"
+        >
+          Voir ma journée proposée →
+        </Link>
+      </div>
 
       {tacheEnEdition && (
         <FormulaireTache
@@ -241,21 +257,6 @@ function EcranAujourdhui() {
           </section>
         </>
       )}
-
-      <div className="flex flex-wrap gap-x-5 gap-y-1">
-        <Link
-          href="/taches"
-          className="text-sm font-medium text-airzen-secondary hover:text-airzen-primary"
-        >
-          Gérer toutes mes tâches →
-        </Link>
-        <Link
-          href="/planning"
-          className="text-sm font-medium text-airzen-secondary hover:text-airzen-primary"
-        >
-          Voir ma journée proposée →
-        </Link>
-      </div>
     </div>
   );
 }

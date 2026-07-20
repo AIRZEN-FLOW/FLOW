@@ -8,9 +8,24 @@
 import type { Tache } from "@/lib/types";
 import { BadgeQuadrant } from "@/components/BadgeQuadrant";
 import { QUADRANTS } from "@/lib/eisenhower";
-import { libelleNiveau } from "@/lib/energie";
-import { formatDuree, formatEcheance, tsEnDate } from "@/lib/format";
-import { IconeCloche, IconeCoche, IconeCorbeille, IconeCrayon, IconeRouvrir } from "@/components/icones";
+import { abregeNiveau, libelleNiveau } from "@/lib/energie";
+import {
+  formatDuree,
+  formatDureeCourt,
+  formatEcheance,
+  formatEcheanceCourt,
+  tsEnDate,
+} from "@/lib/format";
+import {
+  IconeCalendrier,
+  IconeCloche,
+  IconeCoche,
+  IconeCorbeille,
+  IconeCrayon,
+  IconeEclair,
+  IconeHorloge,
+  IconeRouvrir,
+} from "@/components/icones";
 
 interface CarteTacheProps {
   tache: Tache;
@@ -211,25 +226,65 @@ export function CarteTache({
         {elementTitre(
           titrePetit ? "block line-clamp-2 text-xs leading-snug" : "block truncate",
         )}
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-airzen-secondary">
-          <BadgeQuadrant quadrant={tache.quadrantEisenhower} avecLabel={false} />
-          <span>{formatDuree(tache.dureeEstimeeMinutes)}</span>
-          <span title="Énergie requise">{libelleNiveau(tache.niveauEnergieRequis).toLowerCase()}</span>
-          {echeance && <span>{echeance}</span>}
-          {tache.recurrenceRegle && <span title="Tâche récurrente">↻</span>}
-          {tache.rappel && (
-            <span title="Rappel activé" className="inline-flex text-airzen-neutral">
-              <IconeCloche className="h-3 w-3" />
+        {mode === "priorite" ? (
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-airzen-secondary">
+            <BadgeQuadrant quadrant={tache.quadrantEisenhower} avecLabel={false} />
+            <span
+              className="inline-flex items-center gap-0.5"
+              title={`Durée : ${formatDuree(tache.dureeEstimeeMinutes)}`}
+            >
+              <IconeHorloge className="h-3 w-3" />
+              {formatDureeCourt(tache.dureeEstimeeMinutes)}
             </span>
-          )}
-          <IndicateurPlaisir tache={tache} />
-          {projet && (
-            <span className="inline-flex items-center gap-1.5" title={`Projet : ${projet.nom}`}>
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: projet.couleur }} />
-              {projet.nom}
+            <span
+              className="inline-flex items-center gap-0.5"
+              title={`Énergie requise : ${libelleNiveau(tache.niveauEnergieRequis)}`}
+            >
+              <IconeEclair className="h-3 w-3" />
+              {abregeNiveau(tache.niveauEnergieRequis)}
             </span>
-          )}
-        </div>
+            {echeance && (
+              <span className="inline-flex items-center gap-0.5" title={`Échéance : ${echeance}`}>
+                <IconeCalendrier className="h-3 w-3" />
+                {formatEcheanceCourt(tsEnDate(tache.dateEcheance))}
+              </span>
+            )}
+            {tache.recurrenceRegle && <span title="Tâche récurrente">↻</span>}
+            {tache.rappel && (
+              <span title="Rappel activé" className="inline-flex text-airzen-neutral">
+                <IconeCloche className="h-3 w-3" />
+              </span>
+            )}
+            <IndicateurPlaisir tache={tache} />
+            {projet && (
+              <span
+                className="inline-block h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: projet.couleur }}
+                title={`Projet : ${projet.nom}`}
+              />
+            )}
+          </div>
+        ) : (
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-airzen-secondary">
+            <BadgeQuadrant quadrant={tache.quadrantEisenhower} avecLabel={false} />
+            <span>{formatDuree(tache.dureeEstimeeMinutes)}</span>
+            <span title="Énergie requise">{libelleNiveau(tache.niveauEnergieRequis).toLowerCase()}</span>
+            {echeance && <span>{echeance}</span>}
+            {tache.recurrenceRegle && <span title="Tâche récurrente">↻</span>}
+            {tache.rappel && (
+              <span title="Rappel activé" className="inline-flex text-airzen-neutral">
+                <IconeCloche className="h-3 w-3" />
+              </span>
+            )}
+            <IndicateurPlaisir tache={tache} />
+            {projet && (
+              <span className="inline-flex items-center gap-1.5" title={`Projet : ${projet.nom}`}>
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: projet.couleur }} />
+                {projet.nom}
+              </span>
+            )}
+          </div>
+        )}
         {raison && <p className="mt-1 text-xs font-light text-airzen-secondary">{raison}</p>}
       </div>
 
