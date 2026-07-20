@@ -395,6 +395,7 @@ function GestionTaches() {
                       <CarteTache
                         key={t.id}
                         tache={t}
+                        mode="priorite"
                         projet={projetDe(t)}
                         onModifier={ouvrirEdition}
                         onTerminer={(t) => terminer(t.id)}

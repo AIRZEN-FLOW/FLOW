@@ -3,11 +3,12 @@
 // Étape 8 — Vue "journée proposée" : planification automatique INDICATIVE.
 // Les créneaux Google Agenda apparaissent en gris, les tâches proposées en
 // couleur de quadrant. Rien n'est écrit dans Google Agenda (lecture seule).
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/components/AuthProvider";
+import { MessageFinJournee } from "@/components/MessageFinJournee";
 import { useTaches } from "@/lib/hooks/useTaches";
 import { useOccupations, type Occupation } from "@/lib/hooks/useOccupations";
 import { deduireEnergieMoment } from "@/lib/energie";
@@ -56,9 +57,24 @@ function fusionnerOccupations(occupations: Occupation[], debut: Date, fin: Date)
 }
 
 function PagePlanningContenu() {
-  const { profilsEnergie } = useAuth();
+  const { utilisateur, profilsEnergie } = useAuth();
   const { taches, chargement } = useTaches();
   const { occupations, connecte } = useOccupations();
+  const [voirQuandMeme, setVoirQuandMeme] = useState(false);
+  const [maintenant] = useState(() => new Date());
+
+  // Même réglage "Fin de journée" que sur l'écran Aujourd'hui, même message.
+  const journeeTerminee = useMemo(() => {
+    const [h, m] = (utilisateur?.finJournee ?? "19:00").split(":").map(Number);
+    const seuil = new Date(
+      maintenant.getFullYear(),
+      maintenant.getMonth(),
+      maintenant.getDate(),
+      h,
+      m,
+    );
+    return maintenant.getTime() >= seuil.getTime();
+  }, [utilisateur?.finJournee, maintenant]);
 
   const plan = useMemo(() => {
     // Fenêtre de travail : bornes des créneaux d'énergie (défaut 8h-19h).
@@ -124,24 +140,31 @@ function PagePlanningContenu() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-bold text-airzen-primary">Ma journée proposée</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-airzen-primary">
+          Ma journée proposée
+          <span className="inline-block h-2 w-2 rounded-full bg-airzen-accent" aria-hidden />
+        </h1>
         <p className="mt-1 text-sm font-light text-airzen-secondary">
           Une proposition indicative pour le reste de la journée — vous gardez la main.
           Rien n&apos;est écrit dans votre agenda.
         </p>
       </div>
 
-      {!connecte && (
-        <p className="rounded-2xl bg-white p-4 text-sm font-light text-airzen-secondary shadow-sm">
-          💡 Connectez Google Agenda dans les{" "}
-          <Link href="/parametres" className="font-medium underline underline-offset-2">
-            Réglages
-          </Link>{" "}
-          pour que vos rendez-vous soient pris en compte.
-        </p>
-      )}
+      {journeeTerminee && !voirQuandMeme ? (
+        <MessageFinJournee onVoirQuandMeme={() => setVoirQuandMeme(true)} />
+      ) : (
+        <>
+          {!connecte && (
+            <p className="rounded-2xl bg-white p-4 text-sm font-light text-airzen-secondary shadow-sm">
+              💡 Connectez Google Agenda dans les{" "}
+              <Link href="/parametres" className="font-medium underline underline-offset-2">
+                Réglages
+              </Link>{" "}
+              pour que vos rendez-vous soient pris en compte.
+            </p>
+          )}
 
-      {chargement ? (
+          {chargement ? (
         <p className="text-sm font-light text-airzen-secondary">Chargement…</p>
       ) : plan.journeeFinie ? (
         <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
@@ -197,14 +220,16 @@ function PagePlanningContenu() {
               )}
             </li>
           ))}
-        </ol>
-      )}
+            </ol>
+          )}
 
-      {/* Nombre de minutes de la fenetre : indicatif seulement */}
-      <p className="text-xs font-light text-airzen-neutral">
-        Proposition recalculée à chaque visite, selon vos tâches, votre énergie et votre
-        agenda du moment.
-      </p>
+          {/* Nombre de minutes de la fenetre : indicatif seulement */}
+          <p className="text-xs font-light text-airzen-neutral">
+            Proposition recalculée à chaque visite, selon vos tâches, votre énergie et
+            votre agenda du moment.
+          </p>
+        </>
+      )}
     </div>
   );
 }

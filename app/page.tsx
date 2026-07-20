@@ -10,6 +10,8 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/components/AuthProvider";
 import { BandeauEnergie } from "@/components/BandeauEnergie";
+import { MessageFinJournee } from "@/components/MessageFinJournee";
+import { EnTeteAccueil } from "@/components/EnTeteAccueil";
 import { CarteTache } from "@/components/CarteTache";
 import { FormulaireTache } from "@/components/FormulaireTache";
 import { useTaches } from "@/lib/hooks/useTaches";
@@ -109,16 +111,20 @@ function EcranAujourdhui() {
     !chargement &&
     taches.filter((t) => t.statut !== "terminee" && t.statut !== "annulee").length === 0;
 
+  const prenom = utilisateur?.nomAffiche?.split(" ")[0];
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-airzen-primary">Aujourd&apos;hui</h1>
         {termineesCetteSemaine > 0 && (
-          <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-airzen-primary shadow-sm">
+          <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-airzen-primary shadow-sm ring-1 ring-airzen-accent/40">
             😊 {termineesCetteSemaine} cette semaine
           </span>
         )}
       </div>
+
+      <EnTeteAccueil prenom={prenom} maintenant={maintenant} />
 
       {tacheEnEdition && (
         <FormulaireTache
@@ -134,21 +140,7 @@ function EcranAujourdhui() {
       )}
 
       {journeeTerminee && !voirQuandMeme ? (
-        <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
-          <p className="text-lg font-medium text-airzen-primary">
-            🌙 La journée de travail est terminée
-          </p>
-          <p className="mt-2 font-light text-airzen-secondary">
-            Un bon moment pour souffler. À demain !
-          </p>
-          <button
-            type="button"
-            onClick={() => setVoirQuandMeme(true)}
-            className="mt-4 text-sm font-medium text-airzen-secondary underline underline-offset-2 hover:text-airzen-primary"
-          >
-            Afficher mes tâches quand même
-          </button>
-        </div>
+        <MessageFinJournee onVoirQuandMeme={() => setVoirQuandMeme(true)} />
       ) : (
         <>
           <BandeauEnergie
@@ -208,7 +200,8 @@ function EcranAujourdhui() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-airzen-neutral">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-airzen-neutral">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-airzen-accent" aria-hidden />
           Suggestions pour ce moment
         </h2>
 

@@ -18,7 +18,10 @@ interface CarteTacheProps {
   attenue?: boolean; // affichage en retrait (second plan / terminée)
   projet?: { nom: string; couleur: string }; // pastille projet, si rattachée
   sousTacheDe?: string; // titre de la tâche mère (mode tuile, hiérarchie aplatie)
-  mode?: "liste" | "tuile";
+  // "priorite" : même forme que "liste" (pas carrée), mais titre en petite
+  // police + retour à la ligne comme en mode tuile — les colonnes de la vue
+  // Priorités sont trop étroites pour un titre sur une seule ligne.
+  mode?: "liste" | "tuile" | "priorite";
   onModifier?: (t: Tache) => void;
   onTerminer?: (t: Tache) => void;
   onRouvrir?: (t: Tache) => void;
@@ -64,6 +67,7 @@ export function CarteTache({
   const echeance = formatEcheance(tsEnDate(tache.dateEcheance));
   const couleurQuadrant = QUADRANTS[tache.quadrantEisenhower].couleur;
   const tuile = mode === "tuile";
+  const titrePetit = mode === "tuile" || mode === "priorite";
 
   function elementTitre(classes: string) {
     return onModifier ? (
@@ -147,7 +151,12 @@ export function CarteTache({
               ↳ {sousTacheDe}
             </p>
           )}
-          {elementTitre("block line-clamp-3 text-xs leading-snug")}
+          {elementTitre("block line-clamp-2 text-xs leading-snug")}
+          {tache.description && (
+            <p className="mt-0.5 line-clamp-1 text-[10px] font-light text-airzen-neutral">
+              {tache.description}
+            </p>
+          )}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <BadgeQuadrant quadrant={tache.quadrantEisenhower} avecLabel={false} />
             {tache.recurrenceRegle && (
@@ -199,7 +208,9 @@ export function CarteTache({
             ↳ sous-tâche de « {sousTacheDe} »
           </p>
         )}
-        {elementTitre("block truncate")}
+        {elementTitre(
+          titrePetit ? "block line-clamp-2 text-xs leading-snug" : "block truncate",
+        )}
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-airzen-secondary">
           <BadgeQuadrant quadrant={tache.quadrantEisenhower} avecLabel={false} />
           <span>{formatDuree(tache.dureeEstimeeMinutes)}</span>
