@@ -171,6 +171,7 @@ function Reglages() {
     [...profilsEnergie].sort((a, b) => a.heureDebut.localeCompare(b.heureDebut)),
   );
   const [seuil, setSeuil] = useState(() => utilisateur?.seuilUrgenceJours ?? 3);
+  const [finJournee, setFinJournee] = useState(() => utilisateur?.finJournee ?? "19:00");
   const [enregistrement, setEnregistrement] = useState(false);
   const [messageOk, setMessageOk] = useState(false);
 
@@ -193,7 +194,7 @@ function Reglages() {
           }),
         ),
       );
-      await majUtilisateur(user.uid, { seuilUrgenceJours: seuil });
+      await majUtilisateur(user.uid, { seuilUrgenceJours: seuil, finJournee });
       await rafraichir();
       setMessageOk(true);
     } finally {
@@ -280,6 +281,26 @@ function Reglages() {
             className="w-20 rounded-lg border border-airzen-neutral/60 px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
           />
           jours
+        </label>
+      </section>
+
+      <section className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
+        <h2 className="font-semibold text-airzen-primary">Fin de journée</h2>
+        <p className="text-sm font-light text-airzen-secondary">
+          Passé cette heure, l&apos;écran Aujourd&apos;hui vous le signale doucement au
+          lieu de continuer à proposer des tâches — libre à vous de les afficher quand
+          même si besoin.
+        </p>
+        <label className="mt-1 flex items-center gap-2 text-sm text-airzen-secondary">
+          <input
+            type="time"
+            value={finJournee}
+            onChange={(e) => {
+              setFinJournee(e.target.value);
+              setMessageOk(false);
+            }}
+            className="rounded-lg border border-airzen-neutral/60 px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
+          />
         </label>
       </section>
 

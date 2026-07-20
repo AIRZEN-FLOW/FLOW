@@ -5,12 +5,12 @@
 // d'affichage propre à chaque écran.
 import { useCallback, useState } from "react";
 
-export type ModeAffichage = "liste" | "tuile";
+export type ModeAffichage = "liste" | "tuile" | "priorites";
 
 function lire(cle: string): ModeAffichage {
   if (typeof window === "undefined") return "liste";
   const v = window.localStorage.getItem(cle);
-  return v === "tuile" ? "tuile" : "liste";
+  return v === "tuile" || v === "priorites" ? v : "liste";
 }
 
 export function useModeAffichage(cle: string) {

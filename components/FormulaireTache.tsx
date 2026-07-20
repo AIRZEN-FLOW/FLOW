@@ -8,6 +8,7 @@ import type {
   Jour,
   NiveauEnergie,
   NiveauImportance,
+  NiveauPlaisir,
   Projet,
   SaisieTache,
   Tache,
@@ -46,6 +47,12 @@ const OPTIONS_ENERGIE: { valeur: NiveauEnergie; label: string }[] = [
   { valeur: "haute", label: "Haute" },
   { valeur: "moyenne", label: "Moyenne" },
   { valeur: "basse", label: "Basse" },
+];
+
+const OPTIONS_PLAISIR: { valeur: NiveauPlaisir; label: string }[] = [
+  { valeur: "basse", label: "Corvée" },
+  { valeur: "moyenne", label: "Neutre" },
+  { valeur: "haute", label: "Plaisir" },
 ];
 
 function Chips<T extends string>({
@@ -115,6 +122,7 @@ export function FormulaireTache({
   const [energie, setEnergie] = useState<NiveauEnergie>(
     init?.niveauEnergieRequis ?? "moyenne",
   );
+  const [plaisir, setPlaisir] = useState<NiveauPlaisir>(init?.niveauPlaisir ?? "moyenne");
   const [echeance, setEcheance] = useState(
     dateEnValeurInput(tsEnDate(init?.dateEcheance)),
   );
@@ -152,6 +160,7 @@ export function FormulaireTache({
       niveauImportance: importance,
       dureeEstimeeMinutes: dureeMinutes,
       niveauEnergieRequis: energie,
+      niveauPlaisir: plaisir,
       tags: tags
         .split(",")
         .map((t) => t.trim())
@@ -219,6 +228,10 @@ export function FormulaireTache({
 
       <Champ label="Énergie que la tâche demande">
         <Chips options={OPTIONS_ENERGIE} valeur={energie} onChange={setEnergie} />
+      </Champ>
+
+      <Champ label="Plaisir que la tâche procure">
+        <Chips options={OPTIONS_PLAISIR} valeur={plaisir} onChange={setPlaisir} />
       </Champ>
 
       <Champ label="Échéance (optionnelle)">

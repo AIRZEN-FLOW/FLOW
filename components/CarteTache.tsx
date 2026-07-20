@@ -28,6 +28,26 @@ interface CarteTacheProps {
 const CLASSE_BOUTON_ICONE =
   "rounded-full p-1.5 transition-colors hover:bg-airzen-bg shrink-0";
 
+// Indicateur de plaisir, affiché seulement aux extrêmes (corvée / plaisir) —
+// le niveau "moyenne" est le cas neutre par défaut, pas besoin de le signaler.
+function IndicateurPlaisir({ tache }: { tache: Tache }) {
+  if (tache.niveauPlaisir === "basse") {
+    return (
+      <span title="Plutôt une corvée" className="text-airzen-neutral">
+        💪
+      </span>
+    );
+  }
+  if (tache.niveauPlaisir === "haute") {
+    return (
+      <span title="Plutôt un plaisir" className="text-airzen-neutral">
+        😊
+      </span>
+    );
+  }
+  return null;
+}
+
 export function CarteTache({
   tache,
   raison,
@@ -45,26 +65,24 @@ export function CarteTache({
   const couleurQuadrant = QUADRANTS[tache.quadrantEisenhower].couleur;
   const tuile = mode === "tuile";
 
-  const titre = onModifier ? (
-    <button
-      type="button"
-      onClick={() => onModifier(tache)}
-      className={`block truncate text-left font-medium text-airzen-primary hover:underline ${
-        terminee ? "line-through" : ""
-      } ${tuile ? "text-sm" : ""}`}
-      title="Modifier"
-    >
-      {tache.titre}
-    </button>
-  ) : (
-    <p
-      className={`truncate font-medium text-airzen-primary ${terminee ? "line-through" : ""} ${
-        tuile ? "text-sm" : ""
-      }`}
-    >
-      {tache.titre}
-    </p>
-  );
+  function elementTitre(classes: string) {
+    return onModifier ? (
+      <button
+        type="button"
+        onClick={() => onModifier(tache)}
+        className={`text-left font-medium text-airzen-primary hover:underline ${
+          terminee ? "line-through" : ""
+        } ${classes}`}
+        title="Modifier"
+      >
+        {tache.titre}
+      </button>
+    ) : (
+      <p className={`font-medium text-airzen-primary ${terminee ? "line-through" : ""} ${classes}`}>
+        {tache.titre}
+      </p>
+    );
+  }
 
   const actions = (
     <>
@@ -125,11 +143,11 @@ export function CarteTache({
       >
         <div className="min-w-0 flex-1 overflow-hidden">
           {sousTacheDe && (
-            <p className="mb-0.5 truncate text-[11px] font-light text-airzen-neutral">
+            <p className="mb-0.5 truncate text-[10px] font-light text-airzen-neutral">
               ↳ {sousTacheDe}
             </p>
           )}
-          {titre}
+          {elementTitre("block line-clamp-3 text-xs leading-snug")}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <BadgeQuadrant quadrant={tache.quadrantEisenhower} avecLabel={false} />
             {tache.recurrenceRegle && (
@@ -142,6 +160,7 @@ export function CarteTache({
                 <IconeCloche className="h-3 w-3" />
               </span>
             )}
+            <IndicateurPlaisir tache={tache} />
           </div>
           <p className="mt-1 text-[11px] text-airzen-secondary">
             {formatDuree(tache.dureeEstimeeMinutes)}
@@ -180,7 +199,7 @@ export function CarteTache({
             ↳ sous-tâche de « {sousTacheDe} »
           </p>
         )}
-        {titre}
+        {elementTitre("block truncate")}
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-airzen-secondary">
           <BadgeQuadrant quadrant={tache.quadrantEisenhower} avecLabel={false} />
           <span>{formatDuree(tache.dureeEstimeeMinutes)}</span>
@@ -192,6 +211,7 @@ export function CarteTache({
               <IconeCloche className="h-3 w-3" />
             </span>
           )}
+          <IndicateurPlaisir tache={tache} />
           {projet && (
             <span className="inline-flex items-center gap-1.5" title={`Projet : ${projet.nom}`}>
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: projet.couleur }} />

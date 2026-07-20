@@ -1,7 +1,7 @@
 // Algorithme de suggestion "quoi faire maintenant"
 // (voir docs/02-specifications-fonctionnelles.md §6).
 // Croise : durée disponible × énergie du moment × quadrant Eisenhower.
-import type { NiveauEnergie, Quadrant, Tache } from "./types";
+import type { NiveauEnergie, NiveauPlaisir, Quadrant, Tache } from "./types";
 import { QUADRANTS } from "./eisenhower";
 
 /** Temps disponible déclaré par l'utilisatrice (Étape 4, avant Google Agenda). */
@@ -14,6 +14,10 @@ export interface Suggestion {
 }
 
 const ORDRE_QUADRANT: Record<Quadrant, number> = { q1: 0, q2: 1, q3: 2, q4: 3 };
+
+// Critère de plaisir : à priorité égale, on propose d'abord ce qui pèse le
+// plus (moins plaisant), et on garde le plaisir pour après.
+const ORDRE_PLAISIR: Record<NiveauPlaisir, number> = { basse: 0, moyenne: 1, haute: 2 };
 
 /** Compatibilité énergie entre le moment présent et l'énergie requise par la tâche. */
 type AjustementEnergie = "ok" | "avertir" | "eviter" | "exclure";
@@ -118,7 +122,11 @@ export function calculerSuggestions(
     const sa = ORDRE_QUADRANT[a.tache.quadrantEisenhower] + penalite[a.ajustement];
     const sb = ORDRE_QUADRANT[b.tache.quadrantEisenhower] + penalite[b.ajustement];
     if (sa !== sb) return sa - sb;
-    // Égalité : échéance la plus proche, puis tâche la plus courte.
+    // Égalité : la tâche la moins plaisante d'abord (on garde le plaisir pour après).
+    const pa = ORDRE_PLAISIR[a.tache.niveauPlaisir ?? "moyenne"];
+    const pb = ORDRE_PLAISIR[b.tache.niveauPlaisir ?? "moyenne"];
+    if (pa !== pb) return pa - pb;
+    // Puis : échéance la plus proche, puis tâche la plus courte.
     const ea = a.tache.echeanceDate?.getTime() ?? Infinity;
     const eb = b.tache.echeanceDate?.getTime() ?? Infinity;
     if (ea !== eb) return ea - eb;

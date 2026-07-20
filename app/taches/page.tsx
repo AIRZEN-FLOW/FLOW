@@ -15,9 +15,19 @@ import { useAuth } from "@/components/AuthProvider";
 import { useTaches } from "@/lib/hooks/useTaches";
 import { useProjets } from "@/lib/hooks/useProjets";
 import { useModeAffichage } from "@/lib/hooks/useModeAffichage";
-import type { SaisieTache, Tache } from "@/lib/types";
+import { QUADRANTS } from "@/lib/eisenhower";
+import type { Quadrant, SaisieTache, Tache } from "@/lib/types";
 
 const CLASSES_GRILLE_TUILES = "grid grid-cols-2 gap-3 sm:grid-cols-3";
+
+// Mode "priorités" : la matrice d'Eisenhower en 4 colonnes.
+const ORDRE_QUADRANTS: Quadrant[] = ["q1", "q2", "q3", "q4"];
+const SOUS_TITRE_QUADRANT: Record<Quadrant, string> = {
+  q1: "urgent et important",
+  q2: "important, pas urgent",
+  q3: "urgent, pas important",
+  q4: "ni urgent ni important",
+};
 
 function GestionTaches() {
   const { utilisateur } = useAuth();
@@ -145,6 +155,13 @@ function GestionTaches() {
     const p = t.projetId ? projetParId.get(t.projetId) : undefined;
     return p ? { nom: p.nom, couleur: p.couleur } : undefined;
   }
+
+  // Mode priorités : les tâches de premier niveau réparties par quadrant.
+  const parQuadrant = useMemo(() => {
+    const groupes: Record<Quadrant, Tache[]> = { q1: [], q2: [], q3: [], q4: [] };
+    for (const t of topLevel) groupes[t.quadrantEisenhower].push(t);
+    return groupes;
+  }, [topLevel]);
 
   const aucune = !chargement && topLevel.length === 0 && terminees.length === 0;
 
@@ -292,7 +309,7 @@ function GestionTaches() {
             </div>
           )}
         </>
-      ) : (
+      ) : mode === "tuile" ? (
         // Mode tuiles : hiérarchie aplatie (une sous-tâche affiche le titre
         // de sa mère au lieu d'une indentation, impossible à rendre en grille).
         <>
@@ -350,6 +367,46 @@ function GestionTaches() {
             </div>
           )}
         </>
+      ) : (
+        // Mode priorités : la matrice d'Eisenhower en 4 colonnes.
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {ORDRE_QUADRANTS.map((q) => {
+            const liste = parQuadrant[q];
+            return (
+              <div key={q} className="flex flex-col gap-2.5">
+                <div
+                  className="rounded-xl px-3 py-2"
+                  style={{ backgroundColor: `${QUADRANTS[q].couleur}40` }}
+                >
+                  <p className="text-sm font-semibold text-airzen-primary">
+                    {QUADRANTS[q].label}
+                  </p>
+                  <p className="text-xs text-airzen-secondary">
+                    {SOUS_TITRE_QUADRANT[q]} · {liste.length}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {liste.length === 0 ? (
+                    <p className="px-1 text-xs font-light text-airzen-neutral">
+                      Rien ici pour l&apos;instant.
+                    </p>
+                  ) : (
+                    liste.map((t) => (
+                      <CarteTache
+                        key={t.id}
+                        tache={t}
+                        projet={projetDe(t)}
+                        onModifier={ouvrirEdition}
+                        onTerminer={(t) => terminer(t.id)}
+                        onSupprimer={(t) => supprimer(t.id)}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );

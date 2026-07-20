@@ -13,6 +13,7 @@ export function SelecteurAffichage({
   const options: { valeur: ModeAffichage; label: string }[] = [
     { valeur: "liste", label: "Liste" },
     { valeur: "tuile", label: "Tuiles" },
+    { valeur: "priorites", label: "Priorités" },
   ];
   return (
     <div className="inline-flex items-center gap-1 rounded-full bg-white p-1 shadow-sm">

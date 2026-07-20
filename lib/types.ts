@@ -5,6 +5,8 @@ import type { Timestamp } from "firebase/firestore";
 
 export type NiveauEnergie = "haute" | "moyenne" | "basse";
 export type NiveauImportance = "haute" | "moyenne" | "basse";
+/** Plaisir procuré par la tâche — sert à proposer d'abord ce qui pèse le plus. */
+export type NiveauPlaisir = "haute" | "moyenne" | "basse";
 export type StatutTache = "a_faire" | "en_cours" | "terminee" | "annulee";
 export type Quadrant = "q1" | "q2" | "q3" | "q4";
 export type SourceTache = "manuelle" | "decoupage_auto" | "notion" | "gmail" | "trello";
@@ -37,6 +39,8 @@ export interface Utilisateur {
   plan: "gratuit"; // prévu pour évolution future
   seuilUrgenceJours: number; // défaut 3
   seuilDecoupageMinutes: number; // défaut 90
+  /** Heure de fin de journée de travail, format "HH:mm". Défaut "19:00". */
+  finJournee?: string;
   googleCalendarConnecte: boolean;
   creeLe?: Timestamp;
 }
@@ -76,6 +80,8 @@ export interface Tache {
   niveauImportance: NiveauImportance;
   dureeEstimeeMinutes: number;
   niveauEnergieRequis: NiveauEnergie;
+  /** Plaisir procuré (optionnel : les tâches créées avant ce champ ne l'ont pas). */
+  niveauPlaisir?: NiveauPlaisir;
   quadrantEisenhower: Quadrant; // calculé côté application
   tags: string[];
   source: SourceTache;
@@ -94,6 +100,7 @@ export interface SaisieTache {
   niveauImportance: NiveauImportance;
   dureeEstimeeMinutes: number;
   niveauEnergieRequis: NiveauEnergie;
+  niveauPlaisir?: NiveauPlaisir;
   tags?: string[];
   projetId?: string | null;
   tacheParenteId?: string | null;

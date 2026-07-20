@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
+import { useAuth } from "@/components/AuthProvider";
 import { BandeauEnergie } from "@/components/BandeauEnergie";
 import { CarteTache } from "@/components/CarteTache";
 import { FormulaireTache } from "@/components/FormulaireTache";
@@ -34,6 +35,7 @@ function heureCourte(d: Date): string {
 }
 
 function EcranAujourdhui() {
+  const { utilisateur } = useAuth();
   const { taches, chargement, modifier, terminer } = useTaches();
   const { projets } = useProjets();
   const { energieEffective, ajustementManuel, definirOverride, reinitialiser } =
@@ -44,6 +46,21 @@ function EcranAujourdhui() {
   const [tacheEnEdition, setTacheEnEdition] = useState<Tache | null>(null);
   const [enregistrement, setEnregistrement] = useState(false);
   const [maintenant] = useState(() => new Date());
+  const [voirQuandMeme, setVoirQuandMeme] = useState(false);
+
+  // Fin de journée choisie dans Réglages (défaut 19h) : passé cette heure,
+  // on n'insiste plus pour proposer des tâches — le repos aussi compte.
+  const journeeTerminee = useMemo(() => {
+    const [h, m] = (utilisateur?.finJournee ?? "19:00").split(":").map(Number);
+    const seuil = new Date(
+      maintenant.getFullYear(),
+      maintenant.getMonth(),
+      maintenant.getDate(),
+      h,
+      m,
+    );
+    return maintenant.getTime() >= seuil.getTime();
+  }, [utilisateur?.finJournee, maintenant]);
 
   // Petite reconnaissance douce : tâches accomplies au cours des 7 derniers jours.
   const termineesCetteSemaine = useMemo(() => {
@@ -94,13 +111,12 @@ function EcranAujourdhui() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-airzen-primary">Aujourd&apos;hui</h1>
         {termineesCetteSemaine > 0 && (
-          <p className="mt-1 text-sm font-light text-airzen-secondary">
-            😊 {termineesCetteSemaine} tâche{termineesCetteSemaine > 1 ? "s" : ""} accomplie
-            {termineesCetteSemaine > 1 ? "s" : ""} cette semaine
-          </p>
+          <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-airzen-primary shadow-sm">
+            😊 {termineesCetteSemaine} cette semaine
+          </span>
         )}
       </div>
 
@@ -117,15 +133,33 @@ function EcranAujourdhui() {
         />
       )}
 
-      <BandeauEnergie
-        energieEffective={energieEffective}
-        ajustementManuel={ajustementManuel}
-        onDefinir={definirOverride}
-        onReinitialiser={reinitialiser}
-      />
+      {journeeTerminee && !voirQuandMeme ? (
+        <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
+          <p className="text-lg font-medium text-airzen-primary">
+            🌙 La journée de travail est terminée
+          </p>
+          <p className="mt-2 font-light text-airzen-secondary">
+            Un bon moment pour souffler. À demain !
+          </p>
+          <button
+            type="button"
+            onClick={() => setVoirQuandMeme(true)}
+            className="mt-4 text-sm font-medium text-airzen-secondary underline underline-offset-2 hover:text-airzen-primary"
+          >
+            Afficher mes tâches quand même
+          </button>
+        </div>
+      ) : (
+        <>
+          <BandeauEnergie
+            energieEffective={energieEffective}
+            ajustementManuel={ajustementManuel}
+            onDefinir={definirOverride}
+            onReinitialiser={reinitialiser}
+          />
 
-      <section className="flex flex-col gap-2">
-        {agenda && agenda.creneau !== null && tempsChoisi === null ? (
+          <section className="flex flex-col gap-2">
+            {agenda && agenda.creneau !== null && tempsChoisi === null ? (
           <p className="text-sm text-airzen-secondary">
             📅 Prochain rendez-vous à{" "}
             <span className="font-semibold text-airzen-primary">
@@ -211,7 +245,9 @@ function EcranAujourdhui() {
             />
           ))
         )}
-      </section>
+          </section>
+        </>
+      )}
 
       <div className="flex flex-wrap gap-x-5 gap-y-1">
         <Link
