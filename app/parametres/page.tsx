@@ -8,9 +8,34 @@ import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/components/AuthProvider";
 import { libelleNiveau } from "@/lib/energie";
 import { majProfilEnergie, majUtilisateur } from "@/lib/data/profil";
+import { usePreferenceLocale } from "@/lib/hooks/usePreferenceLocale";
+import { CLE_CITATION_VISIBLE } from "@/components/EnTeteAccueil";
 import type { NiveauEnergie, ProfilEnergie } from "@/lib/types";
 
 const NIVEAUX: NiveauEnergie[] = ["haute", "moyenne", "basse"];
+
+// Écran Aujourd'hui — afficher ou masquer la ligne salutation/citation/météo.
+function SectionAccueil() {
+  const [citationVisible, setCitationVisible] = usePreferenceLocale(
+    CLE_CITATION_VISIBLE,
+    true,
+  );
+
+  return (
+    <section className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
+      <h2 className="font-semibold text-airzen-primary">Accueil</h2>
+      <label className="mt-1 flex items-center gap-2 text-sm text-airzen-secondary">
+        <input
+          type="checkbox"
+          checked={citationVisible}
+          onChange={(e) => setCitationVisible(e.target.checked)}
+          className="h-4 w-4 accent-airzen-primary"
+        />
+        Afficher la citation du jour sur l&apos;écran Aujourd&apos;hui
+      </label>
+    </section>
+  );
+}
 
 // Étape 8 — Connexion Google Agenda (lecture seule).
 function SectionGoogleAgenda() {
@@ -258,6 +283,8 @@ function Reglages() {
           </div>
         ))}
       </section>
+
+      <SectionAccueil />
 
       <SectionGoogleAgenda />
 

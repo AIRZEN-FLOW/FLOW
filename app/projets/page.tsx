@@ -8,7 +8,10 @@ import { AppShell } from "@/components/AppShell";
 import { useProjets } from "@/lib/hooks/useProjets";
 import { useTaches } from "@/lib/hooks/useTaches";
 import { COULEURS_PROJET } from "@/lib/data/projets";
-import type { Projet, Tache } from "@/lib/types";
+import { QUADRANTS } from "@/lib/eisenhower";
+import type { Projet, Quadrant, Tache } from "@/lib/types";
+
+const ORDRE_QUADRANTS: Quadrant[] = ["q1", "q2", "q3", "q4"];
 
 function FormulaireProjet({
   onValider,
@@ -232,14 +235,17 @@ function GestionProjets() {
   // Édition d'un projet existant (mutuellement exclusif avec le rattachement).
   const [projetEnEdition, setProjetEnEdition] = useState<Projet | null>(null);
 
-  const compteParProjet = useMemo(() => {
-    const compte = new Map<string, number>();
+  // Répartition par quadrant des tâches en cours de chaque projet — pour
+  // repérer d'un coup d'œil un projet qui n'avance que sur du non-prioritaire.
+  const repartitionParProjet = useMemo(() => {
+    const repartition = new Map<string, Record<Quadrant, number>>();
     for (const t of taches) {
-      if (t.projetId && t.statut !== "terminee" && t.statut !== "annulee") {
-        compte.set(t.projetId, (compte.get(t.projetId) ?? 0) + 1);
-      }
+      if (!t.projetId || t.statut === "terminee" || t.statut === "annulee") continue;
+      const courant = repartition.get(t.projetId) ?? { q1: 0, q2: 0, q3: 0, q4: 0 };
+      courant[t.quadrantEisenhower]++;
+      repartition.set(t.projetId, courant);
     }
-    return compte;
+    return repartition;
   }, [taches]);
 
   const projetParId = useMemo(() => new Map(projets.map((p) => [p.id, p])), [projets]);
@@ -298,7 +304,16 @@ function GestionProjets() {
       ) : (
         <div className="flex flex-col gap-3">
           {projets.map((p) => {
-            const compte = compteParProjet.get(p.id) ?? 0;
+            const repartition = repartitionParProjet.get(p.id) ?? {
+              q1: 0,
+              q2: 0,
+              q3: 0,
+              q4: 0,
+            };
+            const compte = repartition.q1 + repartition.q2 + repartition.q3 + repartition.q4;
+            const detailQuadrants = ORDRE_QUADRANTS.filter((q) => repartition[q] > 0)
+              .map((q) => `${repartition[q]} tâche${repartition[q] > 1 ? "s" : ""} ${QUADRANTS[q].court}`)
+              .join(" · ");
             return (
               <article key={p.id} className="rounded-2xl bg-white p-4 shadow-sm">
                 {projetEnEdition?.id === p.id ? (
@@ -338,6 +353,11 @@ function GestionProjets() {
                               ? "aucune tâche en cours"
                               : `${compte} tâche${compte > 1 ? "s" : ""} en cours`}
                           </p>
+                          {detailQuadrants && (
+                            <p className="mt-0.5 text-xs text-airzen-neutral">
+                              {detailQuadrants}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>

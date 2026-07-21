@@ -1,12 +1,15 @@
 "use client";
 
-// En-tête chaleureux de l'écran "Aujourd'hui" : salutation selon l'heure,
-// météo optionnelle, citation du jour (voir lib/citations.ts — uniquement des
-// citations réelles et vérifiées). Une touche de jaune AIR ZEN en décoration
-// (bordure de la citation), sans surcharger l'écran.
+// En-tête discret de l'écran "Aujourd'hui" : salutation selon l'heure, météo
+// optionnelle, citation du jour (voir lib/citations.ts — uniquement des
+// citations réelles et vérifiées). Tient sur une seule ligne pour ne pas
+// prendre le pas sur les tâches — masquable dans Réglages > Accueil.
 import { useMemo } from "react";
 import { citationDuJour } from "@/lib/citations";
 import { MeteoWidget } from "@/components/MeteoWidget";
+import { usePreferenceLocale } from "@/lib/hooks/usePreferenceLocale";
+
+export const CLE_CITATION_VISIBLE = "airzen-citation-visible";
 
 function salutation(heure: number): string {
   if (heure >= 5 && heure < 12) return "Bonjour";
@@ -21,22 +24,29 @@ export function EnTeteAccueil({
   prenom?: string;
   maintenant: Date;
 }) {
+  const [citationVisible] = usePreferenceLocale(CLE_CITATION_VISIBLE, true);
   const citation = useMemo(() => citationDuJour(maintenant), [maintenant]);
 
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-lg font-semibold text-airzen-primary">
-          {salutation(maintenant.getHours())}
-          {prenom ? `, ${prenom}` : ""} <span aria-hidden>🌿</span>
-        </p>
-        <MeteoWidget />
-      </div>
-      <p className="mt-3 border-l-2 border-airzen-accent pl-3 text-sm font-light italic text-airzen-secondary">
-        <span className="mr-1 text-airzen-accent">❝</span>
-        {citation.texte}
-      </p>
-      <p className="mt-1 pl-3 text-xs text-airzen-neutral">— {citation.auteur}</p>
+    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+      <span className="shrink-0 font-medium text-airzen-primary">
+        {salutation(maintenant.getHours())}
+        {prenom ? `, ${prenom}` : ""} <span aria-hidden>🌿</span>
+      </span>
+      {citationVisible && (
+        <>
+          <span className="shrink-0 text-airzen-accent" aria-hidden>
+            ·
+          </span>
+          <span
+            className="min-w-0 flex-1 truncate font-light italic text-airzen-secondary"
+            title={`${citation.texte} — ${citation.auteur}`}
+          >
+            « {citation.texte} » — {citation.auteur}
+          </span>
+        </>
+      )}
+      <MeteoWidget />
     </div>
   );
 }

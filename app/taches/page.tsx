@@ -2,7 +2,7 @@
 
 // Étape 3 + 5 — Gestion des tâches : création, liste, quadrant, terminer,
 // rattachement à un projet, sous-tâches (tâche parente) et filtre par projet.
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -17,6 +17,7 @@ import { useTaches } from "@/lib/hooks/useTaches";
 import { useProjets } from "@/lib/hooks/useProjets";
 import { useModeAffichage } from "@/lib/hooks/useModeAffichage";
 import { QUADRANTS } from "@/lib/eisenhower";
+import { formatDuree } from "@/lib/format";
 import type { Quadrant, SaisieTache, Tache } from "@/lib/types";
 
 const CLASSES_GRILLE_TUILES = "grid grid-cols-2 gap-3 sm:grid-cols-3";
@@ -60,6 +61,16 @@ function GestionTaches() {
   // Projet à présélectionner à la création (filtre actif, si c'est un vrai projet).
   const projetIdInitial =
     filtreProjet !== "tous" && filtreProjet !== "sans" ? filtreProjet : undefined;
+
+  // Accès rapide depuis un autre écran (ex. rappel Q2 sur Aujourd'hui) :
+  // ?mode=priorites ouvre directement la vue matrice, une seule fois au chargement.
+  const modeParam = searchParams.get("mode");
+  useEffect(() => {
+    if (modeParam === "liste" || modeParam === "tuile" || modeParam === "priorites") {
+      setMode(modeParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const seuilDecoupage = utilisateur?.seuilDecoupageMinutes ?? 90;
 
@@ -155,12 +166,21 @@ function GestionTaches() {
     return p ? { nom: p.nom, couleur: p.couleur } : undefined;
   }
 
-  // Mode priorités : les tâches de premier niveau réparties par quadrant.
+  // Mode priorités : les tâches de premier niveau réparties par quadrant,
+  // avec le temps total estimé de chacun (vue d'ensemble de la charge).
   const parQuadrant = useMemo(() => {
     const groupes: Record<Quadrant, Tache[]> = { q1: [], q2: [], q3: [], q4: [] };
     for (const t of topLevel) groupes[t.quadrantEisenhower].push(t);
     return groupes;
   }, [topLevel]);
+
+  const dureeParQuadrant = useMemo(() => {
+    const total: Record<Quadrant, number> = { q1: 0, q2: 0, q3: 0, q4: 0 };
+    for (const q of ORDRE_QUADRANTS) {
+      total[q] = parQuadrant[q].reduce((s, t) => s + t.dureeEstimeeMinutes, 0);
+    }
+    return total;
+  }, [parQuadrant]);
 
   const aucune = !chargement && topLevel.length === 0 && terminees.length === 0;
 
@@ -316,8 +336,11 @@ function GestionTaches() {
           )}
         </>
       ) : (
-        // Mode priorités : la matrice d'Eisenhower en 4 colonnes.
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        // Mode priorités : la vraie matrice d'Eisenhower, en grille 2×2 (Q1 en
+        // haut à gauche, Q2 en haut à droite, Q3 en bas à gauche, Q4 en bas à
+        // droite) — pour voir d'un coup d'œil si l'urgent déborde sur
+        // l'important-non-urgent.
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {ORDRE_QUADRANTS.map((q) => {
             const liste = parQuadrant[q];
             return (
@@ -330,7 +353,9 @@ function GestionTaches() {
                     {QUADRANTS[q].label}
                   </p>
                   <p className="text-xs text-airzen-secondary">
-                    {SOUS_TITRE_QUADRANT[q]} · {liste.length}
+                    {SOUS_TITRE_QUADRANT[q]} · {liste.length} tâche
+                    {liste.length > 1 ? "s" : ""}
+                    {liste.length > 0 && ` · ${formatDuree(dureeParQuadrant[q])}`}
                   </p>
                 </div>
                 <div className="flex flex-col gap-2">
