@@ -363,10 +363,10 @@ function GestionProjets() {
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
                       <Link
-                        href={`/taches?projet=${p.id}`}
+                        href={`/projets/${p.id}`}
                         className="font-medium text-airzen-secondary hover:text-airzen-primary"
                       >
-                        Voir les tâches →
+                        Voir le projet →
                       </Link>
                       <Link
                         href={`/taches?projet=${p.id}&nouvelle=1`}
