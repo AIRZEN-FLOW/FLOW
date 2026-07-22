@@ -13,7 +13,7 @@ export function SelecteurAffichage({
   const options: { valeur: ModeAffichage; label: string }[] = [
     { valeur: "liste", label: "Liste" },
     { valeur: "tuile", label: "Tuiles" },
-    { valeur: "priorites", label: "Priorités" },
+    { valeur: "priorites", label: "Matrice" },
   ];
   return (
     <div className="inline-flex items-center gap-1 rounded-full bg-white p-1 shadow-sm">
@@ -23,7 +23,7 @@ export function SelecteurAffichage({
           type="button"
           onClick={() => onChange(o.valeur)}
           aria-pressed={mode === o.valeur}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+          className={`rounded-full px-3.5 py-2 text-[12.5px] font-medium transition-colors ${
             mode === o.valeur
               ? "bg-airzen-primary text-white"
               : "text-airzen-secondary hover:bg-airzen-bg"

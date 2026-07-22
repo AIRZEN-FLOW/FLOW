@@ -196,6 +196,7 @@ export function useTaches() {
     modifier,
     terminer,
     rouvrir: (id: string) => changerStatut(id, "a_faire"),
+    changerStatut,
     supprimer,
     rattacherAuProjet,
   };
