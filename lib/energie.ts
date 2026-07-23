@@ -8,11 +8,11 @@ export const CRENEAUX_ENERGIE_DEFAUT: Omit<
   ProfilEnergie,
   "id" | "utilisateurId"
 >[] = [
-  { nomCreneau: "Matin productif", heureDebut: "08:00", heureFin: "11:00", niveauEnergie: "haute", joursActifs: [...JOURS_SEMAINE] },
-  { nomCreneau: "Milieu de matinée", heureDebut: "11:00", heureFin: "12:30", niveauEnergie: "moyenne", joursActifs: [...JOURS_SEMAINE] },
-  { nomCreneau: "Creux d'après-midi", heureDebut: "13:30", heureFin: "15:00", niveauEnergie: "basse", joursActifs: [...JOURS_SEMAINE] },
-  { nomCreneau: "Reprise d'après-midi", heureDebut: "15:00", heureFin: "17:00", niveauEnergie: "moyenne", joursActifs: [...JOURS_SEMAINE] },
-  { nomCreneau: "Fin de journée", heureDebut: "17:00", heureFin: "19:00", niveauEnergie: "basse", joursActifs: [...JOURS_SEMAINE] },
+  { nomCreneau: "Début de matinée", heureDebut: "08:00", heureFin: "11:00", niveauEnergie: "haute", joursActifs: [...JOURS_SEMAINE] },
+  { nomCreneau: "Fin de matinée", heureDebut: "11:00", heureFin: "12:30", niveauEnergie: "moyenne", joursActifs: [...JOURS_SEMAINE] },
+  { nomCreneau: "Début d'après-midi", heureDebut: "13:00", heureFin: "15:00", niveauEnergie: "moyenne", joursActifs: [...JOURS_SEMAINE] },
+  { nomCreneau: "Milieu d'après-midi", heureDebut: "15:00", heureFin: "16:30", niveauEnergie: "basse", joursActifs: [...JOURS_SEMAINE] },
+  { nomCreneau: "Fin d'après-midi", heureDebut: "16:30", heureFin: "19:00", niveauEnergie: "moyenne", joursActifs: [...JOURS_SEMAINE] },
 ];
 
 const LIBELLES_NIVEAU: Record<NiveauEnergie, string> = {

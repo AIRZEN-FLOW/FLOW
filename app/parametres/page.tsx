@@ -1,7 +1,10 @@
 "use client";
 
 // Étapes 4 & 8 — Réglages : créneaux d'énergie, seuil d'urgence, Google Agenda.
-import { Suspense, useState } from "react";
+// Présentation en tuiles carrées (icône + label court) : cliquer une tuile
+// déplie son panneau juste en dessous, pour un écran plus compact et moins
+// verbeux — voir demande "moins de texte, plus d'icônes".
+import { Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
@@ -10,9 +13,74 @@ import { libelleNiveau } from "@/lib/energie";
 import { majProfilEnergie, majUtilisateur } from "@/lib/data/profil";
 import { usePreferenceLocale } from "@/lib/hooks/usePreferenceLocale";
 import { CLE_CITATION_VISIBLE } from "@/components/EnTeteAccueil";
+import { CLE_RAPPEL_PAUSE_ACTIF } from "@/lib/hooks/useRappelPause";
+import {
+  IconeAujourdhui,
+  IconeCalendrier,
+  IconeCloche,
+  IconeDejeuner,
+  IconeEclair,
+  IconeHorloge,
+  IconeSablier,
+} from "@/components/icones";
 import type { NiveauEnergie, ProfilEnergie } from "@/lib/types";
 
 const NIVEAUX: NiveauEnergie[] = ["haute", "moyenne", "basse"];
+
+type IdTuile =
+  | "creneaux"
+  | "dejeuner"
+  | "travail"
+  | "accueil"
+  | "google"
+  | "notifications"
+  | "seuil";
+
+function TuileReglage({
+  actif,
+  icone: Icone,
+  label,
+  resume,
+  onClick,
+}: {
+  actif: boolean;
+  icone: (props: { className?: string }) => ReactNode;
+  label: string;
+  resume?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={actif}
+      className={`flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl p-2.5 text-center shadow-sm transition-colors ${
+        actif
+          ? "bg-airzen-primary text-white"
+          : "bg-white text-airzen-primary hover:bg-airzen-bg"
+      }`}
+    >
+      <Icone className={`h-6 w-6 shrink-0 ${actif ? "text-white" : "text-airzen-secondary"}`} />
+      <span className="text-xs font-semibold leading-tight">{label}</span>
+      {resume && (
+        <span
+          className={`text-[10px] leading-tight ${actif ? "text-white/80" : "text-airzen-neutral"}`}
+        >
+          {resume}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function PanneauReglage({ titre, children }: { titre: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm">
+      <h2 className="font-semibold text-airzen-primary">{titre}</h2>
+      {children}
+    </section>
+  );
+}
 
 // Écran Aujourd'hui — afficher ou masquer la ligne salutation/citation/météo.
 function SectionAccueil() {
@@ -22,9 +90,8 @@ function SectionAccueil() {
   );
 
   return (
-    <section className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
-      <h2 className="font-semibold text-airzen-primary">Accueil</h2>
-      <label className="mt-1 flex items-center gap-2 text-sm text-airzen-secondary">
+    <PanneauReglage titre="Accueil">
+      <label className="flex items-center gap-2 text-sm text-airzen-secondary">
         <input
           type="checkbox"
           checked={citationVisible}
@@ -33,7 +100,7 @@ function SectionAccueil() {
         />
         Afficher la citation du jour sur l&apos;écran Aujourd&apos;hui
       </label>
-    </section>
+    </PanneauReglage>
   );
 }
 
@@ -85,8 +152,7 @@ function SectionGoogleAgenda() {
   }
 
   return (
-    <section className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
-      <h2 className="font-semibold text-airzen-primary">Google Agenda</h2>
+    <PanneauReglage titre="Google Agenda">
       <p className="text-sm font-light text-airzen-secondary">
         En lecture seule : l&apos;app consulte vos créneaux occupés pour calculer votre
         temps réellement disponible. Elle ne crée, ne modifie et ne supprime jamais
@@ -127,11 +193,12 @@ function SectionGoogleAgenda() {
           {enCours ? "Redirection…" : "Connecter Google Agenda"}
         </button>
       )}
-    </section>
+    </PanneauReglage>
   );
 }
 
-// Rappels — permission de notification navigateur (voir lib/hooks/useRappels.ts).
+// Rappels — permission de notification navigateur (voir lib/hooks/useRappels.ts)
+// et rappel doux de pause toutes les 1h30 (voir lib/hooks/useRappelPause.ts).
 function SectionNotifications() {
   const [permission, setPermission] = useState<NotificationPermission | "indisponible">(
     () =>
@@ -140,6 +207,10 @@ function SectionNotifications() {
         : "indisponible",
   );
   const [demande, setDemande] = useState(false);
+  const [rappelPauseActif, setRappelPauseActif] = usePreferenceLocale(
+    CLE_RAPPEL_PAUSE_ACTIF,
+    true,
+  );
 
   async function activer() {
     setDemande(true);
@@ -152,8 +223,7 @@ function SectionNotifications() {
   }
 
   return (
-    <section className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
-      <h2 className="font-semibold text-airzen-primary">Notifications de rappel</h2>
+    <PanneauReglage titre="Notifications">
       <p className="text-sm font-light text-airzen-secondary">
         Pour les tâches où vous avez coché « Me rappeler à l&apos;échéance », une
         notification s&apos;affiche le jour où la tâche arrive à échéance —
@@ -180,29 +250,59 @@ function SectionNotifications() {
           type="button"
           onClick={activer}
           disabled={demande}
-          className="mt-1 self-start rounded-full border border-airzen-neutral/60 px-4 py-2 text-sm font-medium text-airzen-primary transition-colors hover:bg-airzen-bg disabled:opacity-50"
+          className="self-start rounded-full border border-airzen-neutral/60 px-4 py-2 text-sm font-medium text-airzen-primary transition-colors hover:bg-airzen-bg disabled:opacity-50"
         >
           {demande ? "Un instant…" : "Activer les notifications"}
         </button>
       )}
-    </section>
+
+      <div className="mt-1 border-t border-airzen-neutral/20 pt-3">
+        <label className="flex items-center gap-2 text-sm text-airzen-secondary">
+          <input
+            type="checkbox"
+            checked={rappelPauseActif}
+            onChange={(e) => setRappelPauseActif(e.target.checked)}
+            className="h-4 w-4 accent-airzen-primary"
+          />
+          Me rappeler de faire une pause toutes les 1h30
+        </label>
+      </div>
+    </PanneauReglage>
   );
 }
 
 function Reglages() {
   const { user, utilisateur, profilsEnergie, rafraichir } = useAuth();
+  const [tuileOuverte, setTuileOuverte] = useState<IdTuile | null>(null);
+
   // Copie locale éditable (initialisée depuis le profil déjà chargé par l'auth).
   const [creneaux, setCreneaux] = useState<ProfilEnergie[]>(() =>
     [...profilsEnergie].sort((a, b) => a.heureDebut.localeCompare(b.heureDebut)),
   );
   const [seuil, setSeuil] = useState(() => utilisateur?.seuilUrgenceJours ?? 3);
+  const [heureDebutTravail, setHeureDebutTravail] = useState(
+    () => utilisateur?.heureDebutTravail ?? "08:00",
+  );
   const [finJournee, setFinJournee] = useState(() => utilisateur?.finJournee ?? "19:00");
+  const [dejeunerActif, setDejeunerActif] = useState(
+    () => utilisateur?.pauseDejeunerActive ?? true,
+  );
+  const [heureDebutDejeuner, setHeureDebutDejeuner] = useState(
+    () => utilisateur?.heureDebutDejeuner ?? "12:30",
+  );
+  const [heureFinDejeuner, setHeureFinDejeuner] = useState(
+    () => utilisateur?.heureFinDejeuner ?? "13:00",
+  );
   const [enregistrement, setEnregistrement] = useState(false);
   const [messageOk, setMessageOk] = useState(false);
 
   function modifierCreneau(id: string, champs: Partial<ProfilEnergie>) {
     setCreneaux((prev) => prev.map((c) => (c.id === id ? { ...c, ...champs } : c)));
     setMessageOk(false);
+  }
+
+  function basculerTuile(id: IdTuile) {
+    setTuileOuverte((prev) => (prev === id ? null : id));
   }
 
   async function enregistrer() {
@@ -213,13 +313,21 @@ function Reglages() {
       await Promise.all(
         creneaux.map((c) =>
           majProfilEnergie(c.id, {
+            nomCreneau: c.nomCreneau,
             heureDebut: c.heureDebut,
             heureFin: c.heureFin,
             niveauEnergie: c.niveauEnergie,
           }),
         ),
       );
-      await majUtilisateur(user.uid, { seuilUrgenceJours: seuil, finJournee });
+      await majUtilisateur(user.uid, {
+        seuilUrgenceJours: seuil,
+        finJournee,
+        heureDebutTravail,
+        pauseDejeunerActive: dejeunerActif,
+        heureDebutDejeuner,
+        heureFinDejeuner,
+      });
       await rafraichir();
       setMessageOk(true);
     } finally {
@@ -227,29 +335,137 @@ function Reglages() {
     }
   }
 
+  const tuiles: {
+    id: IdTuile;
+    label: string;
+    icone: (props: { className?: string }) => ReactNode;
+    resume?: string;
+  }[] = [
+    {
+      id: "creneaux",
+      label: "Créneaux d'énergie",
+      icone: IconeEclair,
+      resume: `${creneaux.length} créneaux`,
+    },
+    {
+      id: "dejeuner",
+      label: "Déjeuner",
+      icone: IconeDejeuner,
+      resume: dejeunerActif ? `${heureDebutDejeuner}–${heureFinDejeuner}` : "Désactivée",
+    },
+    {
+      id: "travail",
+      label: "Temps de travail",
+      icone: IconeHorloge,
+      resume: `${heureDebutTravail}–${finJournee}`,
+    },
+    { id: "accueil", label: "Accueil", icone: IconeAujourdhui },
+    { id: "google", label: "Google Agenda", icone: IconeCalendrier },
+    { id: "notifications", label: "Notifications", icone: IconeCloche },
+    { id: "seuil", label: "Seuil d'urgence", icone: IconeSablier, resume: `${seuil} j` },
+  ];
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <h1 className="text-2xl font-bold text-airzen-primary">Réglages</h1>
 
-      <section className="flex flex-col gap-3">
-        <div>
-          <h2 className="font-semibold text-airzen-primary">Mes créneaux d&apos;énergie</h2>
-          <p className="mt-1 text-sm font-light text-airzen-secondary">
-            L&apos;app déduit votre énergie du moment à partir de ces plages. Ajustez-les à
-            votre rythme.
-          </p>
-        </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {tuiles.map((t) => (
+          <TuileReglage
+            key={t.id}
+            actif={tuileOuverte === t.id}
+            icone={t.icone}
+            label={t.label}
+            resume={t.resume}
+            onClick={() => basculerTuile(t.id)}
+          />
+        ))}
+      </div>
 
-        {creneaux.map((c) => (
-          <div key={c.id} className="rounded-2xl bg-white p-4 shadow-sm">
-            <p className="font-medium text-airzen-primary">{c.nomCreneau}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
+      {tuileOuverte === "creneaux" && (
+        <PanneauReglage titre="Mes créneaux d'énergie">
+          <p className="-mt-1 text-sm font-light text-airzen-secondary">
+            L&apos;app déduit votre énergie du moment à partir de ces plages. Ajustez-les à
+            votre rythme et renommez-les si besoin.
+          </p>
+          {creneaux.map((c) => (
+            <div key={c.id} className="rounded-xl bg-airzen-bg p-3">
+              <input
+                type="text"
+                value={c.nomCreneau}
+                onChange={(e) => modifierCreneau(c.id, { nomCreneau: e.target.value })}
+                className="w-full rounded-lg border border-transparent bg-transparent px-1 py-0.5 font-medium text-airzen-primary outline-none focus:border-airzen-secondary focus:bg-white"
+              />
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-1.5 text-sm text-airzen-secondary">
+                  de
+                  <input
+                    type="time"
+                    value={c.heureDebut}
+                    onChange={(e) => modifierCreneau(c.id, { heureDebut: e.target.value })}
+                    className="rounded-lg border border-airzen-neutral/60 px-2 py-1 text-airzen-primary outline-none focus:border-airzen-secondary"
+                  />
+                </label>
+                <label className="flex items-center gap-1.5 text-sm text-airzen-secondary">
+                  à
+                  <input
+                    type="time"
+                    value={c.heureFin}
+                    onChange={(e) => modifierCreneau(c.id, { heureFin: e.target.value })}
+                    className="rounded-lg border border-airzen-neutral/60 px-2 py-1 text-airzen-primary outline-none focus:border-airzen-secondary"
+                  />
+                </label>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-xs text-airzen-neutral">Énergie :</span>
+                {NIVEAUX.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => modifierCreneau(c.id, { niveauEnergie: n })}
+                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                      c.niveauEnergie === n
+                        ? "bg-airzen-primary font-medium text-white"
+                        : "bg-white text-airzen-secondary hover:bg-airzen-neutral/30"
+                    }`}
+                  >
+                    {libelleNiveau(n)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </PanneauReglage>
+      )}
+
+      {tuileOuverte === "dejeuner" && (
+        <PanneauReglage titre="Pause déjeuner">
+          <p className="-mt-1 text-sm font-light text-airzen-secondary">
+            Ce créneau est mis de côté : aucune tâche n&apos;y est jamais proposée.
+          </p>
+          <label className="flex items-center gap-2 text-sm text-airzen-secondary">
+            <input
+              type="checkbox"
+              checked={dejeunerActif}
+              onChange={(e) => {
+                setDejeunerActif(e.target.checked);
+                setMessageOk(false);
+              }}
+              className="h-4 w-4 accent-airzen-primary"
+            />
+            Réserver une pause déjeuner chaque jour
+          </label>
+          {dejeunerActif && (
+            <div className="flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-1.5 text-sm text-airzen-secondary">
                 de
                 <input
                   type="time"
-                  value={c.heureDebut}
-                  onChange={(e) => modifierCreneau(c.id, { heureDebut: e.target.value })}
+                  value={heureDebutDejeuner}
+                  onChange={(e) => {
+                    setHeureDebutDejeuner(e.target.value);
+                    setMessageOk(false);
+                  }}
                   className="rounded-lg border border-airzen-neutral/60 px-2 py-1 text-airzen-primary outline-none focus:border-airzen-secondary"
                 />
               </label>
@@ -257,79 +473,84 @@ function Reglages() {
                 à
                 <input
                   type="time"
-                  value={c.heureFin}
-                  onChange={(e) => modifierCreneau(c.id, { heureFin: e.target.value })}
+                  value={heureFinDejeuner}
+                  onChange={(e) => {
+                    setHeureFinDejeuner(e.target.value);
+                    setMessageOk(false);
+                  }}
                   className="rounded-lg border border-airzen-neutral/60 px-2 py-1 text-airzen-primary outline-none focus:border-airzen-secondary"
                 />
               </label>
             </div>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-xs text-airzen-neutral">Énergie :</span>
-              {NIVEAUX.map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => modifierCreneau(c.id, { niveauEnergie: n })}
-                  className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                    c.niveauEnergie === n
-                      ? "bg-airzen-primary font-medium text-white"
-                      : "bg-airzen-bg text-airzen-secondary hover:bg-airzen-neutral/30"
-                  }`}
-                >
-                  {libelleNiveau(n)}
-                </button>
-              ))}
-            </div>
+          )}
+        </PanneauReglage>
+      )}
+
+      {tuileOuverte === "travail" && (
+        <PanneauReglage titre="Temps de travail">
+          <p className="-mt-1 text-sm font-light text-airzen-secondary">
+            Les heures de début et de fin de votre journée type — la proposition de
+            planning s&apos;appuie dessus.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-1.5 text-sm text-airzen-secondary">
+              Début
+              <input
+                type="time"
+                value={heureDebutTravail}
+                onChange={(e) => {
+                  setHeureDebutTravail(e.target.value);
+                  setMessageOk(false);
+                }}
+                className="rounded-lg border border-airzen-neutral/60 px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
+              />
+            </label>
+            <label className="flex items-center gap-1.5 text-sm text-airzen-secondary">
+              Fin
+              <input
+                type="time"
+                value={finJournee}
+                onChange={(e) => {
+                  setFinJournee(e.target.value);
+                  setMessageOk(false);
+                }}
+                className="rounded-lg border border-airzen-neutral/60 px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
+              />
+            </label>
           </div>
-        ))}
-      </section>
+          <p className="text-xs font-light text-airzen-neutral">
+            Passé l&apos;heure de fin, l&apos;écran Aujourd&apos;hui vous le signale
+            doucement au lieu de continuer à proposer des tâches.
+          </p>
+        </PanneauReglage>
+      )}
 
-      <SectionAccueil />
+      {tuileOuverte === "accueil" && <SectionAccueil />}
+      {tuileOuverte === "google" && <SectionGoogleAgenda />}
+      {tuileOuverte === "notifications" && <SectionNotifications />}
 
-      <SectionGoogleAgenda />
-
-      <SectionNotifications />
-
-      <section className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
-        <h2 className="font-semibold text-airzen-primary">Seuil d&apos;urgence</h2>
-        <p className="text-sm font-light text-airzen-secondary">
-          Une tâche est « urgente » si son échéance est dans ce nombre de jours ou moins.
-        </p>
-        <label className="mt-1 flex items-center gap-2 text-sm text-airzen-secondary">
-          <input
-            type="number"
-            min={1}
-            max={30}
-            value={seuil}
-            onChange={(e) => {
-              setSeuil(Math.max(1, Number(e.target.value)));
-              setMessageOk(false);
-            }}
-            className="w-20 rounded-lg border border-airzen-neutral/60 px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
-          />
-          jours
-        </label>
-      </section>
-
-      <section className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
-        <h2 className="font-semibold text-airzen-primary">Fin de journée</h2>
-        <p className="text-sm font-light text-airzen-secondary">
-          Passé cette heure, l&apos;écran Aujourd&apos;hui vous le signale doucement au
-          lieu de continuer à proposer des tâches — libre à vous de les afficher quand
-          même si besoin.
-        </p>
-        <label className="mt-1 flex items-center gap-2 text-sm text-airzen-secondary">
-          <input
-            type="time"
-            value={finJournee}
-            onChange={(e) => {
-              setFinJournee(e.target.value);
-              setMessageOk(false);
-            }}
-            className="rounded-lg border border-airzen-neutral/60 px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
-          />
-        </label>
-      </section>
+      {tuileOuverte === "seuil" && (
+        <PanneauReglage titre="Seuil d'urgence">
+          <p className="-mt-1 text-sm font-light text-airzen-secondary">
+            Une tâche est « urgente » si son échéance est dans ce nombre de jours ou
+            moins.
+          </p>
+          <label className="flex items-center gap-2 text-sm text-airzen-secondary">
+            <input
+              type="number"
+              min={1}
+              max={30}
+              value={seuil}
+              onChange={(e) => {
+                setSeuil(Math.max(1, Number(e.target.value)));
+                setMessageOk(false);
+              }}
+              className="w-20 rounded-lg border border-airzen-neutral/60 px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
+            />
+            jours
+          </label>
+        </PanneauReglage>
+      )}
 
       <div className="flex items-center gap-3">
         <button

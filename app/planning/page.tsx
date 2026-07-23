@@ -45,13 +45,13 @@ function PagePlanningContenu() {
     return maintenant.getTime() >= seuil.getTime();
   }, [utilisateur?.finJournee, maintenant]);
 
-  const plan = usePlanJournee(
-    taches,
-    profilsEnergie,
-    occupations,
-    energieEffective,
-    utilisateur?.finJournee,
-  );
+  const plan = usePlanJournee(taches, profilsEnergie, occupations, energieEffective, {
+    finJournee: utilisateur?.finJournee,
+    heureDebutTravail: utilisateur?.heureDebutTravail,
+    pauseDejeunerActive: utilisateur?.pauseDejeunerActive,
+    heureDebutDejeuner: utilisateur?.heureDebutDejeuner,
+    heureFinDejeuner: utilisateur?.heureFinDejeuner,
+  });
 
   return (
     <div className="flex flex-col gap-5">
@@ -112,7 +112,7 @@ function PagePlanningContenu() {
                   {bloc.type === "occupe" ? (
                     <div className="flex-1 rounded-xl bg-airzen-neutral/25 px-4 py-3">
                       <p className="text-sm font-medium text-airzen-secondary">
-                        Occupé (agenda)
+                        {bloc.label ?? "Occupé (agenda)"}
                       </p>
                       <p className="text-xs text-airzen-neutral">
                         jusqu&apos;à {heureCourte(bloc.fin)}
