@@ -167,7 +167,15 @@ function VueKanban({
 
 function FicheProjet({ projetId }: { projetId: string }) {
   const { projets, chargement: chargementProjets } = useProjets();
-  const { taches, chargement: chargementTaches, terminer, rouvrir, changerStatut } = useTaches();
+  const {
+    taches,
+    chargement: chargementTaches,
+    terminer,
+    rouvrir,
+    changerStatut,
+    demarrerChrono,
+    mettreEnPauseChrono,
+  } = useTaches();
   const [vue, setVue] = useState<VueProjet>("liste");
 
   const projet = projets.find((p) => p.id === projetId);
@@ -366,6 +374,8 @@ function FicheProjet({ projetId }: { projetId: string }) {
                   tache={t}
                   onTerminer={(t) => terminer(t.id)}
                   onRouvrir={(t) => rouvrir(t.id)}
+                  onDemarrerChrono={(t) => demarrerChrono(t.id)}
+                  onMettreEnPauseChrono={(t) => mettreEnPauseChrono(t.id)}
                 />
               ))}
             </div>
