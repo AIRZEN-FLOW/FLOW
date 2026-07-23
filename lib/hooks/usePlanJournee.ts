@@ -193,7 +193,6 @@ export function usePlanJournee(
       .reduce((total, b) => total + minutesEntre(b.debut, b.fin), 0);
 
     return { blocs, minutesDisponibles, minutesPlanifiees, tachesProposees };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     profilsEnergie,
     taches,

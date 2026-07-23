@@ -20,7 +20,7 @@ import {
 import { QUADRANTS } from "@/lib/eisenhower";
 import { formatDuree } from "@/lib/format";
 import { IconeCalendrier } from "@/components/icones";
-import type { Quadrant } from "@/lib/types";
+import type { Quadrant, Tache } from "@/lib/types";
 
 const OPTIONS_PERIODE: { valeur: PeriodeTableauBord; label: string }[] = [
   { valeur: "jour", label: "Jour" },
@@ -45,11 +45,12 @@ function TableauDeBord() {
 
   const comptes = useMemo(() => compterTachesParPeriode(taches), [taches]);
 
+  const tachesPeriode = stats.taches;
   const parQuadrantPeriode = useMemo(() => {
-    const groupes: Record<Quadrant, typeof stats.taches> = { q1: [], q2: [], q3: [], q4: [] };
-    for (const t of stats.taches) groupes[t.quadrantEisenhower].push(t);
+    const groupes: Record<Quadrant, Tache[]> = { q1: [], q2: [], q3: [], q4: [] };
+    for (const t of tachesPeriode) groupes[t.quadrantEisenhower].push(t);
     return groupes;
-  }, [stats.taches]);
+  }, [tachesPeriode]);
 
   const quadrantTotal = Math.max(
     1,

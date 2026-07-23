@@ -44,7 +44,9 @@ export function ChronoTache({
     return () => window.clearInterval(intervalle);
   }, [enCours]);
 
-  const minutes = minutesEcoulees(tache, enCours ? maintenant : Date.now());
+  // `maintenant` ne sert que pendant que le chrono tourne (minutesEcoulees()
+  // ignore ce paramètre en pause) — pas d'appel à Date.now() pendant le rendu.
+  const minutes = minutesEcoulees(tache, maintenant);
 
   return (
     <div className="flex shrink-0 items-center gap-1">
@@ -52,7 +54,11 @@ export function ChronoTache({
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          enCours ? onPause() : onDemarrer();
+          if (enCours) {
+            onPause();
+          } else {
+            onDemarrer();
+          }
         }}
         aria-label={enCours ? "Mettre le chronomètre en pause" : "Démarrer le chronomètre"}
         title={enCours ? "Mettre en pause" : "Démarrer le chronomètre"}
