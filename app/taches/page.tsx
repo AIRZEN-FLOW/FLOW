@@ -42,6 +42,8 @@ function GestionTaches() {
     modifier,
     terminer,
     supprimer,
+    demarrerChrono,
+    mettreEnPauseChrono,
   } = useTaches();
   const { projets } = useProjets();
   const { mode, setMode } = useModeAffichage("airzen-affichage-taches");
@@ -285,6 +287,8 @@ function GestionTaches() {
                   onModifier={ouvrirEdition}
                   onTerminer={(t) => terminer(t.id)}
                   onSupprimer={(t) => supprimer(t.id)}
+                  onDemarrerChrono={(t) => demarrerChrono(t.id)}
+                  onMettreEnPauseChrono={(t) => mettreEnPauseChrono(t.id)}
                 />
                 {enfants.length > 0 && (
                   <div className="ml-4 flex flex-col gap-2 border-l-2 border-airzen-neutral/30 pl-4">
@@ -296,6 +300,8 @@ function GestionTaches() {
                         onModifier={ouvrirEdition}
                         onTerminer={(s) => terminer(s.id)}
                         onSupprimer={(s) => supprimer(s.id)}
+                        onDemarrerChrono={(s) => demarrerChrono(s.id)}
+                        onMettreEnPauseChrono={(s) => mettreEnPauseChrono(s.id)}
                       />
                     ))}
                   </div>
@@ -326,6 +332,8 @@ function GestionTaches() {
                 onModifier={ouvrirEdition}
                 onTerminer={(t) => terminer(t.id)}
                 onSupprimer={(t) => supprimer(t.id)}
+                onDemarrerChrono={(t) => demarrerChrono(t.id)}
+                onMettreEnPauseChrono={(t) => mettreEnPauseChrono(t.id)}
               />
             ))}
           </div>
@@ -373,6 +381,8 @@ function GestionTaches() {
                         onModifier={ouvrirEdition}
                         onTerminer={(t) => terminer(t.id)}
                         onSupprimer={(t) => supprimer(t.id)}
+                        onDemarrerChrono={(t) => demarrerChrono(t.id)}
+                        onMettreEnPauseChrono={(t) => mettreEnPauseChrono(t.id)}
                       />
                     ))
                   )}

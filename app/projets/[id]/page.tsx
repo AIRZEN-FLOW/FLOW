@@ -11,11 +11,15 @@ import { notFound } from "next/navigation";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
 import { CarteTache } from "@/components/CarteTache";
+import { FormulaireTache } from "@/components/FormulaireTache";
+import { CalendrierMois } from "@/components/calendrier/CalendrierMois";
 import { useProjets } from "@/lib/hooks/useProjets";
 import { useTaches } from "@/lib/hooks/useTaches";
-import { QUADRANTS } from "@/lib/eisenhower";
-import { formatEcheanceCourt, tsEnDate } from "@/lib/format";
-import type { Quadrant, StatutTache, Tache } from "@/lib/types";
+import { QUADRANTS, estUrgente } from "@/lib/eisenhower";
+import { formatDureeCourt, formatEcheanceCourt, tsEnDate } from "@/lib/format";
+import { useAuth } from "@/components/AuthProvider";
+import { IconeGlisser } from "@/components/icones";
+import type { Quadrant, SaisieTache, StatutTache, Tache } from "@/lib/types";
 
 const ORDRE_QUADRANTS: Quadrant[] = ["q1", "q2", "q3", "q4"];
 const NIVEAUX_ENERGIE = ["haute", "moyenne", "basse"] as const;
@@ -31,9 +35,19 @@ const COLONNES_KANBAN: { statut: StatutTache; label: string }[] = [
   { statut: "terminee", label: "Terminé" },
 ];
 
-type VueProjet = "liste" | "kanban" | "gantt";
+type VueProjet = "liste" | "kanban" | "gantt" | "calendrier";
 
-function VueGantt({ taches }: { taches: Tache[] }) {
+function VueGantt({
+  taches,
+  seuilUrgenceJours,
+  onReordonner,
+}: {
+  taches: Tache[];
+  seuilUrgenceJours: number;
+  onReordonner: (idsEnOrdre: string[]) => void;
+}) {
+  const [idEnCoursDeDrag, setIdEnCoursDeDrag] = useState<string | null>(null);
+
   const lignes = useMemo(() => {
     return taches
       .map((t) => {
@@ -42,7 +56,8 @@ function VueGantt({ taches }: { taches: Tache[] }) {
         const debut = tsEnDate(t.creeLe) ?? fin;
         return { tache: t, debut: debut.getTime() <= fin.getTime() ? debut : fin, fin };
       })
-      .filter((l): l is { tache: Tache; debut: Date; fin: Date } => l !== null);
+      .filter((l): l is { tache: Tache; debut: Date; fin: Date } => l !== null)
+      .sort((a, b) => (a.tache.ordre ?? 0) - (b.tache.ordre ?? 0));
   }, [taches]);
 
   if (lignes.length === 0) {
@@ -62,9 +77,27 @@ function VueGantt({ taches }: { taches: Tache[] }) {
   const total = finMax - debutMin;
   const nbJours = Math.min(14, Math.max(5, Math.round(total / jourMs)));
 
+  function surDepot(idCible: string) {
+    if (!idEnCoursDeDrag || idEnCoursDeDrag === idCible) {
+      setIdEnCoursDeDrag(null);
+      return;
+    }
+    const ids = lignes.map((l) => l.tache.id);
+    const source = ids.indexOf(idEnCoursDeDrag);
+    const cible = ids.indexOf(idCible);
+    ids.splice(source, 1);
+    ids.splice(cible, 0, idEnCoursDeDrag);
+    onReordonner(ids);
+    setIdEnCoursDeDrag(null);
+  }
+
   return (
     <div className="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm">
-      <div className="flex gap-0 pl-40">
+      <p className="text-xs font-light text-airzen-neutral">
+        Glissez une tâche par sa poignée pour réordonner. La bordure terracotta signale
+        une échéance urgente.
+      </p>
+      <div className="flex gap-0 pl-[184px]">
         {Array.from({ length: nbJours }, (_, i) => {
           const d = new Date(debutMin + (total / nbJours) * i);
           return (
@@ -78,10 +111,21 @@ function VueGantt({ taches }: { taches: Tache[] }) {
         {lignes.map(({ tache, debut, fin }) => {
           const left = ((debut.getTime() - debutMin) / total) * 100;
           const width = Math.max(3, ((fin.getTime() - debut.getTime()) / total) * 100);
+          const urgente = estUrgente(fin, seuilUrgenceJours);
           return (
-            <div key={tache.id} className="flex items-center gap-3">
+            <div
+              key={tache.id}
+              draggable
+              onDragStart={() => setIdEnCoursDeDrag(tache.id)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => surDepot(tache.id)}
+              className={`flex items-center gap-2 ${
+                idEnCoursDeDrag === tache.id ? "opacity-50" : ""
+              }`}
+            >
+              <IconeGlisser className="h-4 w-4 shrink-0 cursor-grab text-airzen-neutral" />
               <span
-                className="w-40 shrink-0 truncate text-[12.5px] font-medium text-airzen-primary"
+                className="w-32 shrink-0 truncate text-[12.5px] font-medium text-airzen-primary"
                 title={tache.titre}
               >
                 {tache.titre}
@@ -94,14 +138,19 @@ function VueGantt({ taches }: { taches: Tache[] }) {
                 }}
               >
                 <div
-                  className="absolute top-[3px] h-5 rounded-md"
+                  className="absolute top-[3px] flex h-5 items-center justify-end overflow-hidden rounded-md px-1.5"
                   style={{
                     left: `${left}%`,
                     width: `${width}%`,
                     backgroundColor: QUADRANTS[tache.quadrantEisenhower].couleur,
+                    border: urgente ? "2px solid #C97064" : undefined,
                   }}
-                  title={`${formatEcheanceCourt(fin) ?? ""}`}
-                />
+                  title={`${formatEcheanceCourt(fin) ?? ""} · ${formatDureeCourt(tache.dureeEstimeeMinutes)}`}
+                >
+                  <span className="truncate text-[10px] font-semibold text-white">
+                    {formatDureeCourt(tache.dureeEstimeeMinutes)}
+                  </span>
+                </div>
               </div>
             </div>
           );
@@ -166,9 +215,34 @@ function VueKanban({
 }
 
 function FicheProjet({ projetId }: { projetId: string }) {
+  const { utilisateur } = useAuth();
   const { projets, chargement: chargementProjets } = useProjets();
-  const { taches, chargement: chargementTaches, terminer, rouvrir, changerStatut } = useTaches();
+  const {
+    taches,
+    chargement: chargementTaches,
+    terminer,
+    rouvrir,
+    changerStatut,
+    demarrerChrono,
+    mettreEnPauseChrono,
+    modifier,
+    reordonnerTaches,
+  } = useTaches();
   const [vue, setVue] = useState<VueProjet>("liste");
+  const [tacheEnEdition, setTacheEnEdition] = useState<Tache | null>(null);
+  const [enregistrement, setEnregistrement] = useState(false);
+  const seuilUrgenceJours = utilisateur?.seuilUrgenceJours ?? 3;
+
+  async function enregistrerModification(saisie: SaisieTache) {
+    if (!tacheEnEdition) return;
+    setEnregistrement(true);
+    try {
+      await modifier(tacheEnEdition.id, saisie);
+      setTacheEnEdition(null);
+    } finally {
+      setEnregistrement(false);
+    }
+  }
 
   const projet = projets.find((p) => p.id === projetId);
   const tachesProjet = useMemo(
@@ -327,12 +401,23 @@ function FicheProjet({ projetId }: { projetId: string }) {
             </div>
           )}
 
-          <div className="flex w-fit gap-1.5 rounded-full bg-white p-1 shadow-sm">
+          {tacheEnEdition && (
+            <FormulaireTache
+              valeursInitiales={tacheEnEdition}
+              onValider={enregistrerModification}
+              onAnnuler={() => setTacheEnEdition(null)}
+              enCours={enregistrement}
+              projets={projets}
+            />
+          )}
+
+          <div className="flex w-fit flex-wrap gap-1.5 rounded-full bg-white p-1 shadow-sm">
             {(
               [
                 { valeur: "liste", label: "Liste" },
                 { valeur: "kanban", label: "Kanban" },
-                { valeur: "gantt", label: "Planning (Gantt)" },
+                { valeur: "gantt", label: "Gantt" },
+                { valeur: "calendrier", label: "Calendrier" },
               ] as const
             ).map((o) => (
               <button
@@ -364,8 +449,11 @@ function FicheProjet({ projetId }: { projetId: string }) {
                 <CarteTache
                   key={t.id}
                   tache={t}
+                  onModifier={setTacheEnEdition}
                   onTerminer={(t) => terminer(t.id)}
                   onRouvrir={(t) => rouvrir(t.id)}
+                  onDemarrerChrono={(t) => demarrerChrono(t.id)}
+                  onMettreEnPauseChrono={(t) => mettreEnPauseChrono(t.id)}
                 />
               ))}
             </div>
@@ -374,8 +462,14 @@ function FicheProjet({ projetId }: { projetId: string }) {
               taches={tachesProjet}
               onDeplacer={(id, statut) => changerStatut(id, statut)}
             />
+          ) : vue === "gantt" ? (
+            <VueGantt
+              taches={tachesProjet}
+              seuilUrgenceJours={seuilUrgenceJours}
+              onReordonner={reordonnerTaches}
+            />
           ) : (
-            <VueGantt taches={tachesProjet} />
+            <CalendrierMois mois={new Date()} taches={tachesProjet} onTacheClic={setTacheEnEdition} />
           )}
         </>
       )}

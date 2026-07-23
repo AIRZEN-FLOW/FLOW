@@ -41,6 +41,14 @@ export interface Utilisateur {
   seuilDecoupageMinutes: number; // défaut 90
   /** Heure de fin de journée de travail, format "HH:mm". Défaut "19:00". */
   finJournee?: string;
+  /** Heure de début de journée type, format "HH:mm". Défaut "08:00". */
+  heureDebutTravail?: string;
+  /** Pause déjeuner, exclue de la planification automatique. Défaut true. */
+  pauseDejeunerActive?: boolean;
+  /** Format "HH:mm". Défaut "12:30". */
+  heureDebutDejeuner?: string;
+  /** Format "HH:mm". Défaut "13:00". */
+  heureFinDejeuner?: string;
   googleCalendarConnecte: boolean;
   creeLe?: Timestamp;
 }
@@ -88,6 +96,12 @@ export interface Tache {
   recurrenceRegle?: RecurrenceRegle | null;
   /** Rappel (notification navigateur) à activer le jour de l'échéance. Défaut false. */
   rappel?: boolean;
+  /** Tri manuel (ex. glisser-déposer dans le Gantt d'un projet). Plus petit = plus haut. */
+  ordre?: number;
+  /** Chronomètre — minutes déjà accumulées (hors session en cours). Défaut 0. */
+  tempsPasseMinutes?: number;
+  /** Chronomètre — horodatage de démarrage si en cours, `null`/absent si en pause. */
+  chronoDemarreLe?: Timestamp | null;
   creeLe?: Timestamp;
   modifieLe?: Timestamp;
 }
@@ -111,4 +125,31 @@ export interface SaisieTache {
     joursConcernes?: Jour[];
     dateFin?: Date | null;
   } | null;
+}
+
+/**
+ * Événement personnel du calendrier (collection `evenementsCalendrier`) —
+ * indépendant de Google Agenda, géré entièrement dans l'app (créé/modifié/
+ * supprimé par l'utilisatrice), pour que le calendrier soit utile même sans
+ * compte Google connecté.
+ */
+export interface EvenementCalendrier {
+  id: string;
+  utilisateurId: string;
+  titre: string;
+  description?: string;
+  dateDebut: Timestamp;
+  dateFin: Timestamp;
+  /** Si vrai, `dateDebut`/`dateFin` ne portent que la date (heures ignorées à l'affichage). */
+  journeeEntiere: boolean;
+  creeLe?: Timestamp;
+}
+
+/** Données de formulaire pour un événement (avant écriture en base). */
+export interface SaisieEvenement {
+  titre: string;
+  description?: string;
+  dateDebut: Date;
+  dateFin: Date;
+  journeeEntiere: boolean;
 }
