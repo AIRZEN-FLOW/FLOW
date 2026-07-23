@@ -75,7 +75,17 @@ export async function majProfilEnergie(
 export async function majUtilisateur(
   uid: string,
   champs: Partial<
-    Pick<Utilisateur, "nomAffiche" | "seuilUrgenceJours" | "seuilDecoupageMinutes" | "finJournee">
+    Pick<
+      Utilisateur,
+      | "nomAffiche"
+      | "seuilUrgenceJours"
+      | "seuilDecoupageMinutes"
+      | "finJournee"
+      | "heureDebutTravail"
+      | "pauseDejeunerActive"
+      | "heureDebutDejeuner"
+      | "heureFinDejeuner"
+    >
   >,
 ): Promise<void> {
   const db = getDbClient();
