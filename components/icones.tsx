@@ -97,6 +97,21 @@ export function IconeEclair({ className = "h-4 w-4" }: PropsIcone) {
   );
 }
 
+/** Épingler une tâche dans la colonne "Faire maintenant" de la vue Priorités. */
+export function IconePunaise({ className = "h-4 w-4" }: PropsIcone) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M12 3a5 5 0 0 0-5 5c0 3.5 5 10 5 10s5-6.5 5-10a5 5 0 0 0-5-5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="8" r="1.6" fill="currentColor" />
+    </svg>
+  );
+}
+
 /** Échéance — utilisée en remplacement du texte "dans X jours". */
 export function IconeCalendrier({ className = "h-4 w-4" }: PropsIcone) {
   return (

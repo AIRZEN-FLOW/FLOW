@@ -41,6 +41,7 @@ export async function creerTache(
     niveauEnergieRequis: saisie.niveauEnergieRequis,
     niveauPlaisir: saisie.niveauPlaisir ?? "moyenne",
     quadrantEisenhower: quadrantPourSaisie(saisie, seuilJours),
+    epinglee: false,
     tags: saisie.tags ?? [],
     source: saisie.source ?? "manuelle",
     rappel: saisie.rappel ?? false,
@@ -106,6 +107,16 @@ export async function majTache(
 export async function supprimerTache(id: string): Promise<void> {
   const db = getDbClient();
   await deleteDoc(doc(db, "taches", id));
+}
+
+/** Épingle (ou désépingle) une tâche dans la colonne Q1 de la vue Priorités — sans
+ * toucher à son échéance ni à son importance, donc sans recalculer le quadrant. */
+export async function basculerEpingleTache(id: string, epinglee: boolean): Promise<void> {
+  const db = getDbClient();
+  await updateDoc(doc(db, "taches", id), {
+    epinglee,
+    modifieLe: serverTimestamp(),
+  });
 }
 
 /** Rattache (ou détache, si null) une tâche existante à un projet — sans toucher au reste. */

@@ -83,6 +83,9 @@ export interface Tache {
   /** Plaisir procuré (optionnel : les tâches créées avant ce champ ne l'ont pas). */
   niveauPlaisir?: NiveauPlaisir;
   quadrantEisenhower: Quadrant; // calculé côté application
+  /** Épinglée manuellement dans la colonne "Faire maintenant" (Q1) de la vue Priorités,
+   * pour la garder sous les yeux sans changer son échéance ni son importance réelles. */
+  epinglee?: boolean;
   tags: string[];
   source: SourceTache;
   recurrenceRegle?: RecurrenceRegle | null;

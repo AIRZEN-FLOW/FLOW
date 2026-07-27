@@ -42,6 +42,7 @@ function GestionTaches() {
     modifier,
     terminer,
     supprimer,
+    basculerEpingle,
   } = useTaches();
   const { projets } = useProjets();
   const { mode, setMode } = useModeAffichage("airzen-affichage-taches");
@@ -168,9 +169,14 @@ function GestionTaches() {
 
   // Mode priorités : les tâches de premier niveau réparties par quadrant,
   // avec le temps total estimé de chacun (vue d'ensemble de la charge).
+  // Une tâche épinglée s'affiche dans Q1 quel que soit son quadrant calculé
+  // (voir components/CarteTache.tsx — bouton punaise), pour la garder sous
+  // les yeux sans toucher à son échéance ni à son importance réelles.
   const parQuadrant = useMemo(() => {
     const groupes: Record<Quadrant, Tache[]> = { q1: [], q2: [], q3: [], q4: [] };
-    for (const t of topLevel) groupes[t.quadrantEisenhower].push(t);
+    for (const t of topLevel) {
+      groupes[t.epinglee ? "q1" : t.quadrantEisenhower].push(t);
+    }
     return groupes;
   }, [topLevel]);
 
@@ -285,6 +291,7 @@ function GestionTaches() {
                   onModifier={ouvrirEdition}
                   onTerminer={(t) => terminer(t.id)}
                   onSupprimer={(t) => supprimer(t.id)}
+                  onEpingler={(t) => basculerEpingle(t.id)}
                 />
                 {enfants.length > 0 && (
                   <div className="ml-4 flex flex-col gap-2 border-l-2 border-airzen-neutral/30 pl-4">
@@ -296,6 +303,7 @@ function GestionTaches() {
                         onModifier={ouvrirEdition}
                         onTerminer={(s) => terminer(s.id)}
                         onSupprimer={(s) => supprimer(s.id)}
+                        onEpingler={(s) => basculerEpingle(s.id)}
                       />
                     ))}
                   </div>
@@ -326,6 +334,7 @@ function GestionTaches() {
                 onModifier={ouvrirEdition}
                 onTerminer={(t) => terminer(t.id)}
                 onSupprimer={(t) => supprimer(t.id)}
+                onEpingler={(t) => basculerEpingle(t.id)}
               />
             ))}
           </div>
@@ -373,6 +382,7 @@ function GestionTaches() {
                         onModifier={ouvrirEdition}
                         onTerminer={(t) => terminer(t.id)}
                         onSupprimer={(t) => supprimer(t.id)}
+                        onEpingler={(t) => basculerEpingle(t.id)}
                       />
                     ))
                   )}
