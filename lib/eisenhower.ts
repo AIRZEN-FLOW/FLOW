@@ -73,8 +73,8 @@ export const QUADRANTS: Record<
   Quadrant,
   { label: string; court: string; couleur: string }
 > = {
-  q1: { label: "Faire maintenant", court: "Q1", couleur: "#C97064" },
-  q2: { label: "Planifier", court: "Q2", couleur: "#EDC426" },
-  q3: { label: "Déléguer ou minimiser", court: "Q3", couleur: "#76939D" },
-  q4: { label: "Éliminer ou différer", court: "Q4", couleur: "#B3BEC4" },
+  q1: { label: "Faire maintenant", court: "P1", couleur: "#C97064" },
+  q2: { label: "Planifier", court: "P2", couleur: "#EDC426" },
+  q3: { label: "Déléguer ou minimiser", court: "P3", couleur: "#76939D" },
+  q4: { label: "Éliminer ou différer", court: "P4", couleur: "#B3BEC4" },
 };

@@ -9,6 +9,7 @@ import { useCelebration } from "@/components/CelebrationProvider";
 import type { SaisieTache, StatutTache, Tache } from "@/lib/types";
 import {
   assignerProjetTache,
+  basculerEpingleTache,
   creerTache,
   demarrerChrono as demarrerChronoDb,
   getTaches,
@@ -144,7 +145,12 @@ export function useTaches() {
     async (id: string) => {
       const tache = taches.find((t) => t.id === id);
       await changerStatut(id, "terminee");
-      celebrer(); // petite reconnaissance à chaque tâche accomplie
+      // Reconnaissance à chaque tâche accomplie — d'autant plus enthousiaste
+      // que la tâche était longue et importante (voir CelebrationProvider).
+      celebrer({
+        dureeEstimeeMinutes: tache?.dureeEstimeeMinutes,
+        niveauImportance: tache?.niveauImportance,
+      });
       if (!user || !tache?.recurrenceRegle) return;
       const suivante = occurrenceSuivante(tache);
       if (!suivante) return;
@@ -177,6 +183,20 @@ export function useTaches() {
     setTaches((prev) => prev.filter((t) => t.id !== id));
     await supprimerTache(id);
   }, []);
+
+  // Épingler/désépingler une tâche dans la colonne Q1 de la vue Priorités
+  // (voir docs/02-specifications-fonctionnelles.md — le quadrant réel, lui,
+  // n'est jamais modifié manuellement).
+  const basculerEpingle = useCallback(
+    async (id: string) => {
+      const tache = taches.find((t) => t.id === id);
+      if (!tache) return;
+      const epinglee = !tache.epinglee;
+      setTaches((prev) => prev.map((t) => (t.id === id ? { ...t, epinglee } : t)));
+      await basculerEpingleTache(id, epinglee);
+    },
+    [taches],
+  );
 
   // Rattache d'un coup plusieurs tâches déjà existantes à un projet
   // (ex : tâches créées avant que le projet n'existe).
@@ -244,6 +264,7 @@ export function useTaches() {
     changerStatut,
     supprimer,
     rattacherAuProjet,
+    basculerEpingle,
     demarrerChrono,
     mettreEnPauseChrono,
     reordonnerTaches,

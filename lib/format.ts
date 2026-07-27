@@ -1,12 +1,19 @@
 // Petits utilitaires de formatage pour l'affichage (durée, échéance).
 import type { Timestamp } from "firebase/firestore";
 
-/** "30 min", "1 h", "1 h 30". */
+/** Une "journée" de durée = une journée de travail standard (7 h), pas 24 h. */
+export const MINUTES_PAR_JOUR = 7 * 60;
+
+/** "30 min", "1 h", "2h30", "2 jours". */
 export function formatDuree(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
+  if (minutes >= MINUTES_PAR_JOUR && minutes % MINUTES_PAR_JOUR === 0) {
+    const j = minutes / MINUTES_PAR_JOUR;
+    return `${j} jour${j > 1 ? "s" : ""}`;
+  }
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return m === 0 ? `${h} h` : `${h} h ${m}`;
+  return m === 0 ? `${h} h` : `${h}h${m}`;
 }
 
 /** Version compacte de la durée pour les espaces très étroits : "30m", "1h30". */
