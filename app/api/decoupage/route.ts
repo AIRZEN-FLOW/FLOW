@@ -51,11 +51,13 @@ export async function POST(request: Request) {
   }
 
   // 2. Configuration : la clé API Anthropic doit être présente sur Render.
+  //    Absente pour l'instant par choix : cette fonctionnalité est réservée
+  //    à une prochaine version payante (voir docs/05-plan-developpement.md).
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json(
       {
         erreur:
-          "Le découpage par IA n'est pas encore configuré : ajoutez ANTHROPIC_API_KEY dans les variables d'environnement Render.",
+          "Le découpage automatique par IA sera disponible dans une prochaine version payante.",
       },
       { status: 501 },
     );
