@@ -98,6 +98,10 @@
 - Écriture sur Google Agenda (une fois la confiance établie avec les suggestions)
 - Intégrations Notion / Gmail / Trello-Asana
 - Logique d'abonnement payant si ouverture à des clientes
+- Découpage automatique des tâches par IA (code déjà prêt depuis l'Étape 6, route
+  `/api/decoupage`) : activation reportée à plus tard, quand une clé Anthropic payante
+  sera en place — une cliente a manifesté de l'intérêt, à envisager comme fonctionnalité
+  réservée à une version payante
 
 ## Conseil de méthode pour Rosenn
 
