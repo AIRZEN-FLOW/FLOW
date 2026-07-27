@@ -7,6 +7,7 @@
 // Le titre est cliquable pour ouvrir directement l'édition (si onModifier fourni).
 import type { Tache } from "@/lib/types";
 import { BadgeQuadrant } from "@/components/BadgeQuadrant";
+import { ChronoTache } from "@/components/ChronoTache";
 import { QUADRANTS } from "@/lib/eisenhower";
 import { abregeNiveau, libelleNiveau } from "@/lib/energie";
 import {
@@ -45,6 +46,9 @@ interface CarteTacheProps {
   // Épingler dans la colonne "Faire maintenant" (Q1) de la vue Priorités,
   // pour garder une tâche sous les yeux sans changer son échéance/importance.
   onEpingler?: (t: Tache) => void;
+  // Chronomètre — fournis les deux pour l'afficher (voir components/ChronoTache.tsx).
+  onDemarrerChrono?: (t: Tache) => void;
+  onMettreEnPauseChrono?: (t: Tache) => void;
 }
 
 const CLASSE_BOUTON_ICONE =
@@ -93,6 +97,8 @@ export function CarteTache({
   onRouvrir,
   onSupprimer,
   onEpingler,
+  onDemarrerChrono,
+  onMettreEnPauseChrono,
 }: CarteTacheProps) {
   const terminee = tache.statut === "terminee";
   const echeance = formatEcheance(tsEnDate(tache.dateEcheance));
@@ -118,6 +124,15 @@ export function CarteTache({
       </p>
     );
   }
+
+  const chrono =
+    !terminee && onDemarrerChrono && onMettreEnPauseChrono ? (
+      <ChronoTache
+        tache={tache}
+        onDemarrer={() => onDemarrerChrono(tache)}
+        onPause={() => onMettreEnPauseChrono(tache)}
+      />
+    ) : null;
 
   const actions = (
     <>
@@ -237,8 +252,9 @@ export function CarteTache({
             </p>
           )}
         </div>
-        <div className="mt-2 flex items-center justify-end gap-0.5 border-t border-airzen-neutral/20 pt-1.5">
-          {actions}
+        <div className="mt-2 flex items-center justify-between gap-0.5 border-t border-airzen-neutral/20 pt-1.5">
+          {chrono}
+          <div className="ml-auto flex items-center gap-0.5">{actions}</div>
         </div>
       </article>
     );
@@ -324,7 +340,10 @@ export function CarteTache({
         {raison && <p className="mt-1 text-xs font-light text-airzen-secondary">{raison}</p>}
       </div>
 
-      <div className="flex shrink-0 items-center gap-0.5">{actions}</div>
+      <div className="flex shrink-0 items-center gap-1">
+        {chrono}
+        <div className="flex items-center gap-0.5">{actions}</div>
+      </div>
     </article>
   );
 }

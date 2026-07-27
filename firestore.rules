@@ -46,6 +46,12 @@ service cloud.firestore {
       allow create: if creeParSoi();
     }
 
+    // Événements personnels du calendrier (indépendants de Google Agenda).
+    match /evenementsCalendrier/{evenementId} {
+      allow read, update, delete: if estProprietaire();
+      allow create: if creeParSoi();
+    }
+
     match /piecesJointes/{pieceId} {
       allow read, update, delete: if estProprietaire();
       allow create: if creeParSoi();

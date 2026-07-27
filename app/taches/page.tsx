@@ -43,6 +43,8 @@ function GestionTaches() {
     terminer,
     supprimer,
     basculerEpingle,
+    demarrerChrono,
+    mettreEnPauseChrono,
   } = useTaches();
   const { projets } = useProjets();
   const { mode, setMode } = useModeAffichage("airzen-affichage-taches");
@@ -292,6 +294,8 @@ function GestionTaches() {
                   onTerminer={(t) => terminer(t.id)}
                   onSupprimer={(t) => supprimer(t.id)}
                   onEpingler={(t) => basculerEpingle(t.id)}
+                  onDemarrerChrono={(t) => demarrerChrono(t.id)}
+                  onMettreEnPauseChrono={(t) => mettreEnPauseChrono(t.id)}
                 />
                 {enfants.length > 0 && (
                   <div className="ml-4 flex flex-col gap-2 border-l-2 border-airzen-neutral/30 pl-4">
@@ -304,6 +308,8 @@ function GestionTaches() {
                         onTerminer={(s) => terminer(s.id)}
                         onSupprimer={(s) => supprimer(s.id)}
                         onEpingler={(s) => basculerEpingle(s.id)}
+                        onDemarrerChrono={(s) => demarrerChrono(s.id)}
+                        onMettreEnPauseChrono={(s) => mettreEnPauseChrono(s.id)}
                       />
                     ))}
                   </div>
@@ -335,6 +341,8 @@ function GestionTaches() {
                 onTerminer={(t) => terminer(t.id)}
                 onSupprimer={(t) => supprimer(t.id)}
                 onEpingler={(t) => basculerEpingle(t.id)}
+                onDemarrerChrono={(t) => demarrerChrono(t.id)}
+                onMettreEnPauseChrono={(t) => mettreEnPauseChrono(t.id)}
               />
             ))}
           </div>
@@ -383,6 +391,8 @@ function GestionTaches() {
                         onTerminer={(t) => terminer(t.id)}
                         onSupprimer={(t) => supprimer(t.id)}
                         onEpingler={(t) => basculerEpingle(t.id)}
+                        onDemarrerChrono={(t) => demarrerChrono(t.id)}
+                        onMettreEnPauseChrono={(t) => mettreEnPauseChrono(t.id)}
                       />
                     ))
                   )}
