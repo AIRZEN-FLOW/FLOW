@@ -7,6 +7,7 @@
 // Le titre est cliquable pour ouvrir directement l'édition (si onModifier fourni).
 import type { Tache } from "@/lib/types";
 import { BadgeQuadrant } from "@/components/BadgeQuadrant";
+import { ChronoTache } from "@/components/ChronoTache";
 import { QUADRANTS } from "@/lib/eisenhower";
 import { abregeNiveau, libelleNiveau } from "@/lib/energie";
 import {
@@ -24,6 +25,7 @@ import {
   IconeCrayon,
   IconeEclair,
   IconeHorloge,
+  IconePunaise,
   IconeRouvrir,
 } from "@/components/icones";
 
@@ -41,6 +43,12 @@ interface CarteTacheProps {
   onTerminer?: (t: Tache) => void;
   onRouvrir?: (t: Tache) => void;
   onSupprimer?: (t: Tache) => void;
+  // Épingler dans la colonne "Faire maintenant" (Q1) de la vue Priorités,
+  // pour garder une tâche sous les yeux sans changer son échéance/importance.
+  onEpingler?: (t: Tache) => void;
+  // Chronomètre — fournis les deux pour l'afficher (voir components/ChronoTache.tsx).
+  onDemarrerChrono?: (t: Tache) => void;
+  onMettreEnPauseChrono?: (t: Tache) => void;
 }
 
 const CLASSE_BOUTON_ICONE =
@@ -66,6 +74,17 @@ function IndicateurPlaisir({ tache }: { tache: Tache }) {
   return null;
 }
 
+// Petit repère quand une tâche est épinglée dans Priorité 1 alors que son
+// quadrant réel (calculé) est différent — pour ne pas induire en erreur.
+function IndicateurEpingle({ tache }: { tache: Tache }) {
+  if (!tache.epinglee) return null;
+  return (
+    <span title="Épinglée dans Priorité 1" className="inline-flex text-airzen-accent">
+      <IconePunaise className="h-3 w-3" />
+    </span>
+  );
+}
+
 export function CarteTache({
   tache,
   raison,
@@ -77,6 +96,9 @@ export function CarteTache({
   onTerminer,
   onRouvrir,
   onSupprimer,
+  onEpingler,
+  onDemarrerChrono,
+  onMettreEnPauseChrono,
 }: CarteTacheProps) {
   const terminee = tache.statut === "terminee";
   const echeance = formatEcheance(tsEnDate(tache.dateEcheance));
@@ -103,8 +125,34 @@ export function CarteTache({
     );
   }
 
+  const chrono =
+    !terminee && onDemarrerChrono && onMettreEnPauseChrono ? (
+      <ChronoTache
+        tache={tache}
+        onDemarrer={() => onDemarrerChrono(tache)}
+        onPause={() => onMettreEnPauseChrono(tache)}
+      />
+    ) : null;
+
   const actions = (
     <>
+      {!terminee && onEpingler && (
+        <button
+          type="button"
+          onClick={() => onEpingler(tache)}
+          aria-label={tache.epinglee ? "Désépingler" : "Épingler dans Priorité 1"}
+          title={
+            tache.epinglee
+              ? "Désépingler"
+              : "Épingler dans Priorité 1 — la garder sous les yeux"
+          }
+          className={`${CLASSE_BOUTON_ICONE} ${
+            tache.epinglee ? "text-airzen-accent" : "text-airzen-secondary"
+          }`}
+        >
+          <IconePunaise />
+        </button>
+      )}
       {onModifier && (
         <button
           type="button"
@@ -194,6 +242,7 @@ export function CarteTache({
           )}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <BadgeQuadrant quadrant={tache.quadrantEisenhower} avecLabel={false} />
+            <IndicateurEpingle tache={tache} />
             {tache.recurrenceRegle && (
               <span title="Tâche récurrente" className="text-xs text-airzen-neutral">
                 ↻
@@ -211,8 +260,9 @@ export function CarteTache({
             {echeance ? ` · ${echeance}` : ""}
           </p>
         </div>
-        <div className="mt-2 flex items-center justify-end gap-0.5 border-t border-airzen-neutral/20 pt-1.5">
-          {actions}
+        <div className="mt-2 flex items-center justify-between gap-0.5 border-t border-airzen-neutral/20 pt-1.5">
+          {chrono}
+          <div className="ml-auto flex items-center gap-0.5">{actions}</div>
         </div>
       </article>
     );
@@ -238,6 +288,7 @@ export function CarteTache({
         {mode === "priorite" ? (
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-airzen-secondary">
             <BadgeQuadrant quadrant={tache.quadrantEisenhower} avecLabel={false} />
+            <IndicateurEpingle tache={tache} />
             <span
               className="inline-flex items-center gap-0.5"
               title={`Durée : ${formatDuree(tache.dureeEstimeeMinutes)}`}
@@ -269,6 +320,7 @@ export function CarteTache({
         ) : (
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-airzen-secondary">
             <BadgeQuadrant quadrant={tache.quadrantEisenhower} avecLabel={false} />
+            <IndicateurEpingle tache={tache} />
             <span>{formatDuree(tache.dureeEstimeeMinutes)}</span>
             <span title="Énergie requise">{libelleNiveau(tache.niveauEnergieRequis).toLowerCase()}</span>
             {echeance && <span>{echeance}</span>}
@@ -284,7 +336,10 @@ export function CarteTache({
         {raison && <p className="mt-1 text-xs font-light text-airzen-secondary">{raison}</p>}
       </div>
 
-      <div className="flex shrink-0 items-center gap-0.5">{actions}</div>
+      <div className="flex shrink-0 items-center gap-1">
+        {chrono}
+        <div className="flex items-center gap-0.5">{actions}</div>
+      </div>
     </article>
   );
 }

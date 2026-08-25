@@ -97,6 +97,21 @@ export function IconeEclair({ className = "h-4 w-4" }: PropsIcone) {
   );
 }
 
+/** Épingler une tâche dans la colonne "Faire maintenant" de la vue Priorités. */
+export function IconePunaise({ className = "h-4 w-4" }: PropsIcone) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M12 3a5 5 0 0 0-5 5c0 3.5 5 10 5 10s5-6.5 5-10a5 5 0 0 0-5-5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="8" r="1.6" fill="currentColor" />
+    </svg>
+  );
+}
+
 /** Échéance — utilisée en remplacement du texte "dans X jours". */
 export function IconeCalendrier({ className = "h-4 w-4" }: PropsIcone) {
   return (
@@ -212,6 +227,91 @@ export function IconeFermer({ className = "h-5 w-5" }: PropsIcone) {
         strokeWidth="1.8"
         strokeLinecap="round"
       />
+    </svg>
+  );
+}
+
+// ─── Icônes ajoutées pour les Réglages en tuiles, le chronomètre, le
+// calendrier personnel et la sidebar ───
+
+/** Pause déjeuner (tuile Réglages). */
+export function IconeDejeuner({ className = "h-5 w-5" }: PropsIcone) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M5 10.5a7 7 0 0 1 14 0v6.5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-6.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M3.5 10.5h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Seuil d'urgence (tuile Réglages) — sablier. */
+export function IconeSablier({ className = "h-5 w-5" }: PropsIcone) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M7 3.5h10M7 20.5h10M7.5 3.5v3.2c0 1.3.6 2.5 1.6 3.3l1.9 1.5v.1l-1.9 1.5a4.2 4.2 0 0 0-1.6 3.3v3.6M16.5 3.5v3.2c0 1.3-.6 2.5-1.6 3.3L13 11.5v.1l1.9 1.5c1 .8 1.6 2 1.6 3.3v3.6"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Lien mail "Commentaire bêta testeur" (sidebar). */
+export function IconeMail({ className = "h-[19px] w-[19px]" }: PropsIcone) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M4.5 7l7.5 6 7.5-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** Démarrer le chronomètre d'une tâche. */
+export function IconeLecture({ className = "h-4 w-4" }: PropsIcone) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M6 4.5v15l14-7.5Z" fill="currentColor" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** Mettre le chronomètre d'une tâche en pause. */
+export function IconePause({ className = "h-4 w-4" }: PropsIcone) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="6" y="4.5" width="4" height="15" rx="1" fill="currentColor" />
+      <rect x="14" y="4.5" width="4" height="15" rx="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Poignée de glisser-déposer (réordonnancement Gantt). */
+export function IconeGlisser({ className = "h-4 w-4" }: PropsIcone) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <circle cx="9" cy="6" r="1.4" />
+      <circle cx="9" cy="12" r="1.4" />
+      <circle cx="9" cy="18" r="1.4" />
+      <circle cx="15" cy="6" r="1.4" />
+      <circle cx="15" cy="12" r="1.4" />
+      <circle cx="15" cy="18" r="1.4" />
+    </svg>
+  );
+}
+
+/** Une case du calendrier / vue calendrier. */
+export function IconePlus({ className = "h-4 w-4" }: PropsIcone) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }

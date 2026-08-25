@@ -3,15 +3,20 @@
 // Hook de gestion des tâches de l'utilisatrice connectée.
 // Charge la liste et expose les mutations (créer, terminer, rouvrir, supprimer).
 import { useCallback, useEffect, useState } from "react";
+import { Timestamp } from "firebase/firestore";
 import { useAuth } from "@/components/AuthProvider";
 import { useCelebration } from "@/components/CelebrationProvider";
 import type { SaisieTache, StatutTache, Tache } from "@/lib/types";
 import {
   assignerProjetTache,
+  basculerEpingleTache,
   creerTache,
+  demarrerChrono as demarrerChronoDb,
   getTaches,
   majStatutTache,
   majTache,
+  mettreEnPauseChrono as mettreEnPauseChronoDb,
+  reordonnerTaches as reordonnerTachesDb,
   supprimerTache,
 } from "@/lib/data/taches";
 import { calculerQuadrant } from "@/lib/eisenhower";
@@ -140,7 +145,12 @@ export function useTaches() {
     async (id: string) => {
       const tache = taches.find((t) => t.id === id);
       await changerStatut(id, "terminee");
-      celebrer(); // petite reconnaissance à chaque tâche accomplie
+      // Reconnaissance à chaque tâche accomplie — d'autant plus enthousiaste
+      // que la tâche était longue et importante (voir CelebrationProvider).
+      celebrer({
+        dureeEstimeeMinutes: tache?.dureeEstimeeMinutes,
+        niveauImportance: tache?.niveauImportance,
+      });
       if (!user || !tache?.recurrenceRegle) return;
       const suivante = occurrenceSuivante(tache);
       if (!suivante) return;
@@ -174,6 +184,20 @@ export function useTaches() {
     await supprimerTache(id);
   }, []);
 
+  // Épingler/désépingler une tâche dans la colonne Q1 de la vue Priorités
+  // (voir docs/02-specifications-fonctionnelles.md — le quadrant réel, lui,
+  // n'est jamais modifié manuellement).
+  const basculerEpingle = useCallback(
+    async (id: string) => {
+      const tache = taches.find((t) => t.id === id);
+      if (!tache) return;
+      const epinglee = !tache.epinglee;
+      setTaches((prev) => prev.map((t) => (t.id === id ? { ...t, epinglee } : t)));
+      await basculerEpingleTache(id, epinglee);
+    },
+    [taches],
+  );
+
   // Rattache d'un coup plusieurs tâches déjà existantes à un projet
   // (ex : tâches créées avant que le projet n'existe).
   const rattacherAuProjet = useCallback(
@@ -185,6 +209,47 @@ export function useTaches() {
     },
     [],
   );
+
+  // Chronomètre — démarrer/reprendre : horodatage optimiste local (précision à
+  // la seconde près suffisante ici), persisté avec un vrai `serverTimestamp()`.
+  const demarrerChrono = useCallback(async (id: string) => {
+    const maintenant = Timestamp.fromDate(new Date());
+    setTaches((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, chronoDemarreLe: maintenant } : t)),
+    );
+    await demarrerChronoDb(id);
+  }, []);
+
+  // Chronomètre — mettre en pause : cumule le temps écoulé depuis le démarrage.
+  const mettreEnPauseChrono = useCallback(
+    async (id: string) => {
+      const tache = taches.find((t) => t.id === id);
+      if (!tache?.chronoDemarreLe) return;
+      const debut = tsEnDate(tache.chronoDemarreLe);
+      const ecouleMinutes = debut
+        ? Math.max(0, Math.round((Date.now() - debut.getTime()) / 60000))
+        : 0;
+      const total = (tache.tempsPasseMinutes ?? 0) + ecouleMinutes;
+      setTaches((prev) =>
+        prev.map((t) =>
+          t.id === id ? { ...t, tempsPasseMinutes: total, chronoDemarreLe: null } : t,
+        ),
+      );
+      await mettreEnPauseChronoDb(id, total);
+    },
+    [taches],
+  );
+
+  // Réordonnancement manuel (glisser-déposer dans le Gantt d'un projet).
+  const reordonnerTaches = useCallback(async (idsEnOrdre: string[]) => {
+    setTaches((prev) =>
+      prev.map((t) => {
+        const index = idsEnOrdre.indexOf(t.id);
+        return index >= 0 ? { ...t, ordre: index } : t;
+      }),
+    );
+    await reordonnerTachesDb(idsEnOrdre);
+  }, []);
 
   return {
     taches,
@@ -199,5 +264,9 @@ export function useTaches() {
     changerStatut,
     supprimer,
     rattacherAuProjet,
+    basculerEpingle,
+    demarrerChrono,
+    mettreEnPauseChrono,
+    reordonnerTaches,
   };
 }
