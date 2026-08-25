@@ -189,9 +189,28 @@ export function FormulaireTache({
           onChange={(e) => setTitre(e.target.value)}
           placeholder="Ex : préparer le devis client X"
           autoFocus
+          spellCheck
+          lang="fr"
           className="rounded-lg border border-airzen-neutral/60 px-3 py-2.5 text-airzen-primary outline-none focus:border-airzen-secondary"
         />
       </Champ>
+
+      {projets.length > 0 && (
+        <Champ label="Projet">
+          <select
+            value={projetId ?? ""}
+            onChange={(e) => setProjetId(e.target.value)}
+            className="w-fit rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
+          >
+            <option value="">Aucun projet</option>
+            {projets.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nom}
+              </option>
+            ))}
+          </select>
+        </Champ>
+      )}
 
       <Champ label="Durée estimée">
         <div className="flex flex-wrap items-center gap-2">
@@ -269,6 +288,8 @@ export function FormulaireTache({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+              spellCheck
+              lang="fr"
               className="rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
             />
           </Champ>
@@ -315,22 +336,6 @@ export function FormulaireTache({
               className="rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
             />
           </Champ>
-          {projets.length > 0 && (
-            <Champ label="Projet">
-              <select
-                value={projetId ?? ""}
-                onChange={(e) => setProjetId(e.target.value)}
-                className="rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
-              >
-                <option value="">Aucun projet</option>
-                {projets.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nom}
-                  </option>
-                ))}
-              </select>
-            </Champ>
-          )}
           {tachesParentes.length > 0 && (
             <Champ label="Sous-tâche de…">
               <select

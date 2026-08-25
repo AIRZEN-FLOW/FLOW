@@ -10,12 +10,14 @@ import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/components/AuthProvider";
 import { MessageFinJournee } from "@/components/MessageFinJournee";
 import { useTaches } from "@/lib/hooks/useTaches";
+import { useProjets } from "@/lib/hooks/useProjets";
 import { useHorloge } from "@/lib/hooks/useHorloge";
 import { useEnergieMoment } from "@/lib/hooks/useEnergieMoment";
 import { useOccupations } from "@/lib/hooks/useOccupations";
 import { usePlanJournee } from "@/lib/hooks/usePlanJournee";
 import { QUADRANTS } from "@/lib/eisenhower";
 import { formatDuree } from "@/lib/format";
+import { IconeCoche } from "@/components/icones";
 
 function heureCourte(d: Date): string {
   return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -23,11 +25,17 @@ function heureCourte(d: Date): string {
 
 function PagePlanningContenu() {
   const { utilisateur, profilsEnergie } = useAuth();
-  const { taches, chargement } = useTaches();
+  const { taches, chargement, terminer } = useTaches();
+  const { projets } = useProjets();
   const { occupations, connecte } = useOccupations();
   const { energieEffective } = useEnergieMoment();
   const [voirQuandMeme, setVoirQuandMeme] = useState(false);
   const maintenant = useHorloge();
+
+  const projetParId = useMemo(
+    () => new Map(projets.map((p) => [p.id, p])),
+    [projets],
+  );
 
   // Même réglage "Fin de journée" que sur l'écran Aujourd'hui, même message —
   // c'est la SEULE limite de fin de journée : la fenêtre de planification s'aligne
@@ -120,19 +128,45 @@ function PagePlanningContenu() {
                     </div>
                   ) : bloc.type === "tache" && bloc.tache ? (
                     <div
-                      className="flex-1 rounded-xl bg-white px-4 py-3 shadow-sm"
+                      className="flex flex-1 items-start justify-between gap-3 rounded-xl bg-white px-4 py-3 shadow-sm"
                       style={{
                         borderLeft: `4px solid ${QUADRANTS[bloc.tache.quadrantEisenhower].couleur}`,
                       }}
                     >
-                      <p className="text-sm font-medium text-airzen-primary">
-                        {bloc.tache.titre}
-                      </p>
-                      <p className="text-xs text-airzen-secondary">
-                        {formatDuree(bloc.tache.dureeEstimeeMinutes)} ·{" "}
-                        {QUADRANTS[bloc.tache.quadrantEisenhower].label}
-                        {bloc.energieCompatible && " · ⚡ énergie compatible"}
-                      </p>
+                      <div className="min-w-0">
+                        {bloc.tache.projetId &&
+                          projetParId.get(bloc.tache.projetId) && (
+                            <p
+                              className="flex items-center gap-1 truncate text-[11px] font-medium"
+                              style={{ color: projetParId.get(bloc.tache.projetId)!.couleur }}
+                            >
+                              <span
+                                className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+                                style={{
+                                  backgroundColor: projetParId.get(bloc.tache.projetId)!.couleur,
+                                }}
+                              />
+                              {projetParId.get(bloc.tache.projetId)!.nom}
+                            </p>
+                          )}
+                        <p className="text-sm font-medium text-airzen-primary">
+                          {bloc.tache.titre}
+                        </p>
+                        <p className="text-xs text-airzen-secondary">
+                          {formatDuree(bloc.tache.dureeEstimeeMinutes)} ·{" "}
+                          {QUADRANTS[bloc.tache.quadrantEisenhower].label}
+                          {bloc.energieCompatible && " · ⚡ énergie compatible"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => terminer(bloc.tache!.id)}
+                        aria-label="Terminer"
+                        title="Terminer"
+                        className="shrink-0 rounded-full p-1.5 text-airzen-primary transition-colors hover:bg-airzen-bg"
+                      >
+                        <IconeCoche />
+                      </button>
                     </div>
                   ) : (
                     <div className="flex-1 rounded-xl border border-dashed border-airzen-neutral/40 px-4 py-3">

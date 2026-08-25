@@ -152,6 +152,25 @@ export function CarteTache({
     </>
   );
 
+  // Nom du projet affiché AVANT le titre de la tâche (repère de contexte immédiat),
+  // conformément au besoin exprimé : "1 - le nom du projet, 2 - la tâche".
+  function elementProjet(classes: string) {
+    if (!projet) return null;
+    return (
+      <p
+        className={`flex items-center gap-1 truncate font-medium ${classes}`}
+        style={{ color: projet.couleur }}
+        title={`Projet : ${projet.nom}`}
+      >
+        <span
+          className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+          style={{ backgroundColor: projet.couleur }}
+        />
+        {projet.nom}
+      </p>
+    );
+  }
+
   if (tuile) {
     return (
       <article
@@ -161,6 +180,7 @@ export function CarteTache({
         style={{ borderLeft: `4px solid ${couleurQuadrant}` }}
       >
         <div className="min-w-0 flex-1 overflow-hidden">
+          {elementProjet("mb-0.5 text-[10px]")}
           {sousTacheDe && (
             <p className="mb-0.5 truncate text-[10px] font-light text-airzen-neutral">
               ↳ {sousTacheDe}
@@ -190,18 +210,6 @@ export function CarteTache({
             {formatDuree(tache.dureeEstimeeMinutes)}
             {echeance ? ` · ${echeance}` : ""}
           </p>
-          {projet && (
-            <p
-              className="mt-1 truncate text-[11px] text-airzen-secondary"
-              title={`Projet : ${projet.nom}`}
-            >
-              <span
-                className="mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle"
-                style={{ backgroundColor: projet.couleur }}
-              />
-              {projet.nom}
-            </p>
-          )}
         </div>
         <div className="mt-2 flex items-center justify-end gap-0.5 border-t border-airzen-neutral/20 pt-1.5">
           {actions}
@@ -218,6 +226,7 @@ export function CarteTache({
       style={{ borderLeft: `4px solid ${couleurQuadrant}` }}
     >
       <div className="min-w-0 flex-1">
+        {elementProjet("text-[11px]")}
         {sousTacheDe && (
           <p className="truncate text-[11px] font-light text-airzen-neutral">
             ↳ sous-tâche de « {sousTacheDe} »
@@ -256,13 +265,6 @@ export function CarteTache({
               </span>
             )}
             <IndicateurPlaisir tache={tache} />
-            {projet && (
-              <span
-                className="inline-block h-2 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: projet.couleur }}
-                title={`Projet : ${projet.nom}`}
-              />
-            )}
           </div>
         ) : (
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-airzen-secondary">
@@ -277,12 +279,6 @@ export function CarteTache({
               </span>
             )}
             <IndicateurPlaisir tache={tache} />
-            {projet && (
-              <span className="inline-flex items-center gap-1.5" title={`Projet : ${projet.nom}`}>
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: projet.couleur }} />
-                {projet.nom}
-              </span>
-            )}
           </div>
         )}
         {raison && <p className="mt-1 text-xs font-light text-airzen-secondary">{raison}</p>}

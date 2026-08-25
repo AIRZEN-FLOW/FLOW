@@ -41,6 +41,7 @@ function GestionTaches() {
     creerAvecSousTaches,
     modifier,
     terminer,
+    rouvrir,
     supprimer,
   } = useTaches();
   const { projets } = useProjets();
@@ -308,6 +309,23 @@ function GestionTaches() {
               Tout est fait ici, bravo ✨
             </p>
           )}
+          {terminees.length > 0 && (
+            <>
+              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-airzen-neutral">
+                Terminées ({terminees.length})
+              </p>
+              {terminees.map((t) => (
+                <CarteTache
+                  key={t.id}
+                  tache={t}
+                  projet={projetDe(t)}
+                  onModifier={ouvrirEdition}
+                  onRouvrir={(t) => rouvrir(t.id)}
+                  onSupprimer={(t) => supprimer(t.id)}
+                />
+              ))}
+            </>
+          )}
         </div>
       ) : mode === "tuile" ? (
         // Mode tuiles : hiérarchie aplatie (une sous-tâche affiche le titre
@@ -333,6 +351,26 @@ function GestionTaches() {
             <p className="text-sm font-light text-airzen-secondary">
               Tout est fait ici, bravo ✨
             </p>
+          )}
+          {terminees.length > 0 && (
+            <>
+              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-airzen-neutral">
+                Terminées ({terminees.length})
+              </p>
+              <div className={CLASSES_GRILLE_TUILES}>
+                {terminees.map((t) => (
+                  <CarteTache
+                    key={t.id}
+                    tache={t}
+                    mode="tuile"
+                    projet={projetDe(t)}
+                    onModifier={ouvrirEdition}
+                    onRouvrir={(t) => rouvrir(t.id)}
+                    onSupprimer={(t) => supprimer(t.id)}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </>
       ) : (
