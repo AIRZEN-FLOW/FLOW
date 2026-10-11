@@ -10,7 +10,7 @@ import { AppShell } from "@/components/AppShell";
 import { FormulaireTache } from "@/components/FormulaireTache";
 import { CarteTache } from "@/components/CarteTache";
 import { ModaleDecoupage, type SousTacheChoisie } from "@/components/ModaleDecoupage";
-import { LegendeQuadrants } from "@/components/LegendeQuadrants";
+import { ExplicationMatrice } from "@/components/ExplicationMatrice";
 import { SelecteurAffichage } from "@/components/SelecteurAffichage";
 import { useAuth } from "@/components/AuthProvider";
 import { useTaches } from "@/lib/hooks/useTaches";
@@ -219,7 +219,7 @@ function GestionTaches() {
               </select>
             </label>
           )}
-          <LegendeQuadrants />
+          <ExplicationMatrice seuilJours={utilisateur?.seuilUrgenceJours ?? 3} />
           {terminees.length > 0 && (
             <Link
               href="/terminees"

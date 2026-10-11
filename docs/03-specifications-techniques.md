@@ -90,9 +90,10 @@ Structure retenue : des collections **au niveau racine**, chaque document portan
 | `statut` | string | `a_faire` / `en_cours` / `terminee` / `annulee` |
 | `dateEcheance` | timestamp | optionnel |
 | `niveauImportance` | string | `haute` / `moyenne` / `basse` |
+| `urgenceRessentie` | boolean \| null | optionnel — `true` « urgent pour moi », `false` « peut attendre », `null`/absent = urgence proposée d'après l'échéance |
 | `dureeEstimeeMinutes` | number | |
 | `niveauEnergieRequis` | string | `haute` / `moyenne` / `basse` |
-| `quadrantEisenhower` | string | **Calculé**, recalculé côté application à chaque écriture (`q1`/`q2`/`q3`/`q4`) |
+| `quadrantEisenhower` | string | **Calculé**, recalculé côté application à chaque écriture (`q1`/`q2`/`q3`/`q4`) à partir de l'importance, de l'échéance et de `urgenceRessentie` |
 | `tags` | array\<string\> | |
 | `source` | string | `manuelle` / `decoupage_auto` / réservé futur : `notion`, `gmail`, `trello` |
 | `recurrenceRegle` | map (objet) | optionnel, structure `{ frequence, joursConcernes, dateFin }` |

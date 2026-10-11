@@ -15,6 +15,10 @@ import type {
 } from "@/lib/types";
 import { JOURS_SEMAINE } from "@/lib/types";
 import { tsEnDate, dateEnValeurInput } from "@/lib/format";
+import { expliquerQuadrant } from "@/lib/eisenhower";
+import { useAuth } from "@/components/AuthProvider";
+import { BadgeQuadrant } from "@/components/BadgeQuadrant";
+import { ExplicationMatrice } from "@/components/ExplicationMatrice";
 
 type Frequence = "aucune" | "quotidienne" | "hebdomadaire" | "mensuelle";
 
@@ -41,6 +45,15 @@ const OPTIONS_IMPORTANCE: { valeur: NiveauImportance; label: string }[] = [
   { valeur: "haute", label: "Haute" },
   { valeur: "moyenne", label: "Moyenne" },
   { valeur: "basse", label: "Basse" },
+];
+
+// Urgence ressentie : "auto" = l'app propose d'après l'échéance (stocké null).
+type ChoixUrgence = "auto" | "urgent" | "attendre";
+
+const OPTIONS_URGENCE: { valeur: ChoixUrgence; label: string }[] = [
+  { valeur: "auto", label: "Laisser l'app proposer" },
+  { valeur: "urgent", label: "Urgent pour moi" },
+  { valeur: "attendre", label: "Peut attendre" },
 ];
 
 const OPTIONS_ENERGIE: { valeur: NiveauEnergie; label: string }[] = [
@@ -114,6 +127,8 @@ export function FormulaireTache({
   tachesParentes = [],
 }: FormulaireTacheProps) {
   const init = valeursInitiales;
+  const { utilisateur } = useAuth();
+  const seuilJours = utilisateur?.seuilUrgenceJours ?? 3;
   const [titre, setTitre] = useState(init?.titre ?? "");
   const [dureeMinutes, setDureeMinutes] = useState(init?.dureeEstimeeMinutes ?? 30);
   const [importance, setImportance] = useState<NiveauImportance>(
@@ -125,6 +140,13 @@ export function FormulaireTache({
   const [plaisir, setPlaisir] = useState<NiveauPlaisir>(init?.niveauPlaisir ?? "moyenne");
   const [echeance, setEcheance] = useState(
     dateEnValeurInput(tsEnDate(init?.dateEcheance)),
+  );
+  const [urgence, setUrgence] = useState<ChoixUrgence>(
+    init?.urgenceRessentie === true
+      ? "urgent"
+      : init?.urgenceRessentie === false
+        ? "attendre"
+        : "auto",
   );
   const [description, setDescription] = useState(init?.description ?? "");
   const [tags, setTags] = useState((init?.tags ?? []).join(", "));
@@ -150,14 +172,20 @@ export function FormulaireTache({
     );
   }
 
+  const urgenceRessentie = urgence === "auto" ? null : urgence === "urgent";
+  const dateEcheance = echeance ? new Date(`${echeance}T00:00:00`) : null;
+  // Aperçu en direct de la priorité proposée, avec le "pourquoi".
+  const apercu = expliquerQuadrant(dateEcheance, importance, urgenceRessentie, seuilJours);
+
   async function soumettre(e: FormEvent) {
     e.preventDefault();
     if (!titre.trim()) return;
     const saisie: SaisieTache = {
       titre,
       description: description || undefined,
-      dateEcheance: echeance ? new Date(`${echeance}T00:00:00`) : null,
+      dateEcheance,
       niveauImportance: importance,
+      urgenceRessentie,
       dureeEstimeeMinutes: dureeMinutes,
       niveauEnergieRequis: energie,
       niveauPlaisir: plaisir,
@@ -253,6 +281,24 @@ export function FormulaireTache({
           </label>
         )}
       </Champ>
+
+      <div className="flex flex-col gap-2.5 rounded-xl border border-airzen-neutral/40 p-3.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-airzen-primary">Priorité proposée</span>
+          <BadgeQuadrant quadrant={apercu.quadrant} />
+        </div>
+        <ul className="flex flex-col gap-0.5 text-xs font-light text-airzen-secondary">
+          <li>{apercu.importance}</li>
+          <li>{apercu.urgence}</li>
+        </ul>
+        <Champ label="Et pour vous, c'est urgent ?">
+          <Chips options={OPTIONS_URGENCE} valeur={urgence} onChange={setUrgence} />
+        </Champ>
+        <ExplicationMatrice
+          seuilJours={seuilJours}
+          libelle="ⓘ Comprendre la matrice d'Eisenhower"
+        />
+      </div>
 
       <button
         type="button"
