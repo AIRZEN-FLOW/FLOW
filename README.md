@@ -60,12 +60,17 @@ connexion Google Agenda une fois `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` confi
 ## Éviter la mise en veille (plan gratuit Render)
 
 Sur le plan gratuit, Render **endort** le serveur après ~15 minutes sans visite (d'où un
-démarrage lent de 30-60 s à la visite suivante). Deux solutions :
+démarrage lent de 30-60 s à la visite suivante). Solutions :
 
-1. **Gratuite** : créer un compte sur [uptimerobot.com](https://uptimerobot.com) (gratuit)
+1. **Déjà en place (gratuite)** : le fichier `.github/workflows/garder-eveille.yml` fait
+   appeler `/api/sante` par GitHub toutes les 10 minutes. À régler une seule fois dans
+   GitHub : *Settings › Secrets and variables › Actions › Variables* → créer `APP_URL`
+   avec l'adresse de l'app (ex. `https://air-zen-flow.onrender.com`). Limite : GitHub
+   peut retarder ces appels aux heures chargées, d'où la solution 2 en complément.
+2. **Gratuite, plus ponctuelle** : créer un compte sur [uptimerobot.com](https://uptimerobot.com) (gratuit)
    et ajouter un « monitor » HTTP qui appelle `https://VOTRE-APP.onrender.com/api/sante`
    toutes les 5 minutes. Ce trafic régulier garde le serveur éveillé.
-2. **Payante (la plus fiable)** : passer le service Render au plan **Starter** (~7 $/mois),
+3. **Payante (la plus fiable)** : passer le service Render au plan **Starter** (~7 $/mois),
    qui ne s'endort jamais.
 
 ## Configuration (pour déployer)
