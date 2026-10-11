@@ -9,6 +9,7 @@ import { useProjets } from "@/lib/hooks/useProjets";
 import { useTaches } from "@/lib/hooks/useTaches";
 import { COULEURS_PROJET } from "@/lib/data/projets";
 import { QUADRANTS } from "@/lib/eisenhower";
+import { IconeCrayon } from "@/components/icones";
 import type { Projet, Quadrant, Tache } from "@/lib/types";
 
 const ORDRE_QUADRANTS: Quadrant[] = ["q1", "q2", "q3", "q4"];
@@ -49,6 +50,8 @@ function FormulaireProjet({
           onChange={(e) => setNom(e.target.value)}
           placeholder="Ex : Lancement formation Excel"
           autoFocus
+          spellCheck
+          lang="fr"
           className="rounded-lg border border-airzen-neutral/60 px-3 py-2.5 text-airzen-primary outline-none focus:border-airzen-secondary"
         />
       </div>
@@ -68,6 +71,11 @@ function FormulaireProjet({
             />
           ))}
         </div>
+        <p className="text-xs font-light text-airzen-secondary">
+          Cette couleur identifiera ce projet partout dans l&apos;app (tâches, planning,
+          tuiles) — un simple repère visuel, pas de sens caché : choisissez celle qui vous
+          parle le plus pour ce projet.
+        </p>
       </div>
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-airzen-primary">Description (optionnelle)</span>
@@ -75,6 +83,8 @@ function FormulaireProjet({
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          spellCheck
+          lang="fr"
           className="rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
         />
       </div>
@@ -334,14 +344,25 @@ function GestionProjets() {
                           style={{ backgroundColor: p.couleur }}
                         />
                         <div className="min-w-0">
-                          <button
-                            type="button"
-                            onClick={() => ouvrirEditionProjet(p)}
-                            className="truncate text-left font-medium text-airzen-primary hover:underline"
-                            title="Modifier"
-                          >
-                            {p.nom}
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => ouvrirEditionProjet(p)}
+                              className="truncate text-left font-medium text-airzen-primary hover:underline"
+                              title="Modifier le nom, la couleur ou la description"
+                            >
+                              {p.nom}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => ouvrirEditionProjet(p)}
+                              aria-label="Modifier le projet"
+                              title="Modifier le nom, la couleur ou la description"
+                              className="shrink-0 rounded-full p-1 text-airzen-neutral transition-colors hover:bg-airzen-bg hover:text-airzen-secondary"
+                            >
+                              <IconeCrayon className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                           {p.description && (
                             <p className="mt-0.5 text-sm font-light text-airzen-secondary">
                               {p.description}
@@ -406,7 +427,15 @@ function GestionProjets() {
                       )}
                       <button
                         type="button"
-                        onClick={() => supprimer(p.id)}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Supprimer le projet « ${p.nom} » ? Les tâches déjà créées ne seront pas supprimées, mais elles perdront leur rattachement à ce projet.`,
+                            )
+                          ) {
+                            supprimer(p.id);
+                          }
+                        }}
                         className="text-airzen-neutral hover:text-q1"
                       >
                         Supprimer

@@ -14,7 +14,7 @@ import type {
   Tache,
 } from "@/lib/types";
 import { JOURS_SEMAINE } from "@/lib/types";
-import { tsEnDate, dateEnValeurInput } from "@/lib/format";
+import { tsEnDate, dateEnValeurInput, formatDuree, MINUTES_PAR_JOUR } from "@/lib/format";
 import { expliquerQuadrant } from "@/lib/eisenhower";
 import { useAuth } from "@/components/AuthProvider";
 import { BadgeQuadrant } from "@/components/BadgeQuadrant";
@@ -40,6 +40,15 @@ const LIBELLE_JOUR_COURT: Record<Jour, string> = {
 };
 
 const DUREES_RAPIDES = [15, 30, 45, 60, 90];
+
+type UniteDuree = "min" | "heures" | "jours";
+
+/** Devine l'unité la plus lisible pour une durée déjà enregistrée en minutes. */
+function uniteInitiale(minutes: number): UniteDuree {
+  if (minutes >= MINUTES_PAR_JOUR && minutes % MINUTES_PAR_JOUR === 0) return "jours";
+  if (minutes >= 60) return "heures";
+  return "min";
+}
 
 const OPTIONS_IMPORTANCE: { valeur: NiveauImportance; label: string }[] = [
   { valeur: "haute", label: "Haute" },
@@ -131,6 +140,9 @@ export function FormulaireTache({
   const seuilJours = utilisateur?.seuilUrgenceJours ?? 3;
   const [titre, setTitre] = useState(init?.titre ?? "");
   const [dureeMinutes, setDureeMinutes] = useState(init?.dureeEstimeeMinutes ?? 30);
+  const [uniteDuree, setUniteDuree] = useState<UniteDuree>(() =>
+    uniteInitiale(init?.dureeEstimeeMinutes ?? 30),
+  );
   const [importance, setImportance] = useState<NiveauImportance>(
     init?.niveauImportance ?? "moyenne",
   );
@@ -165,6 +177,18 @@ export function FormulaireTache({
   );
   // Étape "rappels" — notification navigateur le jour de l'échéance.
   const [rappel, setRappel] = useState(init?.rappel ?? false);
+
+  // Change l'unité affichée ; si la durée actuelle est dérisoire dans la
+  // nouvelle unité (ex : 20 min affichées en "jours"), on la remonte à un
+  // minimum sensé pour éviter un "0 jour" déroutant.
+  function changerUniteDuree(nouvelle: UniteDuree) {
+    setUniteDuree(nouvelle);
+    if (nouvelle === "jours" && dureeMinutes < MINUTES_PAR_JOUR) {
+      setDureeMinutes(MINUTES_PAR_JOUR);
+    } else if (nouvelle === "heures" && dureeMinutes < 60) {
+      setDureeMinutes(60);
+    }
+  }
 
   function basculerJour(jour: Jour) {
     setJoursConcernes((prev) =>
@@ -217,37 +241,115 @@ export function FormulaireTache({
           onChange={(e) => setTitre(e.target.value)}
           placeholder="Ex : préparer le devis client X"
           autoFocus
+          spellCheck
+          lang="fr"
           className="rounded-lg border border-airzen-neutral/60 px-3 py-2.5 text-airzen-primary outline-none focus:border-airzen-secondary"
         />
       </Champ>
 
+      {projets.length > 0 && (
+        <Champ label="Projet">
+          <select
+            value={projetId ?? ""}
+            onChange={(e) => setProjetId(e.target.value)}
+            className="w-fit rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
+          >
+            <option value="">Aucun projet</option>
+            {projets.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nom}
+              </option>
+            ))}
+          </select>
+        </Champ>
+      )}
+
       <Champ label="Durée estimée">
         <div className="flex flex-wrap items-center gap-2">
-          {DUREES_RAPIDES.map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setDureeMinutes(d)}
-              className={`rounded-full px-3 py-1.5 text-sm transition-colors ${
-                dureeMinutes === d
-                  ? "bg-airzen-primary font-medium text-white"
-                  : "bg-airzen-bg text-airzen-secondary hover:bg-airzen-neutral/30"
-              }`}
-            >
-              {d < 60 ? `${d} min` : d === 60 ? "1 h" : "1 h 30"}
-            </button>
-          ))}
-          <label className="flex items-center gap-1.5 text-sm text-airzen-secondary">
-            <input
-              type="number"
-              min={1}
-              value={dureeMinutes}
-              onChange={(e) => setDureeMinutes(Math.max(1, Number(e.target.value)))}
-              className="w-20 rounded-lg border border-airzen-neutral/60 px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
-            />
-            min
-          </label>
+          {uniteDuree === "min" && (
+            <>
+              {DUREES_RAPIDES.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setDureeMinutes(d)}
+                  className={`rounded-full px-3 py-1.5 text-sm transition-colors ${
+                    dureeMinutes === d
+                      ? "bg-airzen-primary font-medium text-white"
+                      : "bg-airzen-bg text-airzen-secondary hover:bg-airzen-neutral/30"
+                  }`}
+                >
+                  {d < 60 ? `${d} min` : d === 60 ? "1 h" : "1 h 30"}
+                </button>
+              ))}
+              <input
+                type="number"
+                min={1}
+                value={dureeMinutes}
+                onChange={(e) => setDureeMinutes(Math.max(1, Number(e.target.value)))}
+                className="w-16 rounded-lg border border-airzen-neutral/60 px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
+              />
+            </>
+          )}
+
+          {uniteDuree === "heures" && (
+            <>
+              <input
+                type="number"
+                min={0}
+                value={Math.floor(dureeMinutes / 60)}
+                onChange={(e) => {
+                  const h = Math.max(0, Number(e.target.value));
+                  setDureeMinutes(Math.max(1, h * 60 + (dureeMinutes % 60)));
+                }}
+                className="w-14 rounded-lg border border-airzen-neutral/60 px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
+              />
+              <span className="text-sm text-airzen-secondary">h</span>
+              <input
+                type="number"
+                min={0}
+                max={59}
+                step={5}
+                value={dureeMinutes % 60}
+                onChange={(e) => {
+                  const m = Math.min(59, Math.max(0, Number(e.target.value)));
+                  setDureeMinutes(Math.max(1, Math.floor(dureeMinutes / 60) * 60 + m));
+                }}
+                className="w-14 rounded-lg border border-airzen-neutral/60 px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
+              />
+              <span className="text-sm text-airzen-secondary">min</span>
+            </>
+          )}
+
+          {uniteDuree === "jours" && (
+            <>
+              <input
+                type="number"
+                min={1}
+                value={Math.round(dureeMinutes / MINUTES_PAR_JOUR)}
+                onChange={(e) => {
+                  const j = Math.max(1, Number(e.target.value));
+                  setDureeMinutes(j * MINUTES_PAR_JOUR);
+                }}
+                className="w-14 rounded-lg border border-airzen-neutral/60 px-2 py-1.5 text-airzen-primary outline-none focus:border-airzen-secondary"
+              />
+              <span className="text-sm text-airzen-secondary">
+                jour{Math.round(dureeMinutes / MINUTES_PAR_JOUR) > 1 ? "s" : ""}
+              </span>
+            </>
+          )}
+
+          <select
+            value={uniteDuree}
+            onChange={(e) => changerUniteDuree(e.target.value as UniteDuree)}
+            className="rounded-lg border border-airzen-neutral/60 bg-white px-2 py-1.5 text-sm text-airzen-primary outline-none focus:border-airzen-secondary"
+          >
+            <option value="min">min</option>
+            <option value="heures">heures</option>
+            <option value="jours">jours</option>
+          </select>
         </div>
+        <p className="text-xs font-light text-airzen-secondary">Soit {formatDuree(dureeMinutes)}</p>
       </Champ>
 
       <Champ label="Importance">
@@ -315,6 +417,8 @@ export function FormulaireTache({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+              spellCheck
+              lang="fr"
               className="rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
             />
           </Champ>
@@ -361,22 +465,6 @@ export function FormulaireTache({
               className="rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
             />
           </Champ>
-          {projets.length > 0 && (
-            <Champ label="Projet">
-              <select
-                value={projetId ?? ""}
-                onChange={(e) => setProjetId(e.target.value)}
-                className="rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
-              >
-                <option value="">Aucun projet</option>
-                {projets.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nom}
-                  </option>
-                ))}
-              </select>
-            </Champ>
-          )}
           {tachesParentes.length > 0 && (
             <Champ label="Sous-tâche de…">
               <select

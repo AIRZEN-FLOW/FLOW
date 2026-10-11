@@ -18,6 +18,17 @@ export interface BlocPlan {
   type: "occupe" | "tache" | "libre";
   tache?: Tache;
   energieCompatible?: boolean;
+  /** Libellé du bloc "occupe", ex. "Pause déjeuner" au lieu de "Occupé (agenda)". */
+  label?: string;
+}
+
+/** Réglages de journée type utilisés pour borner et occuper la fenêtre de planification. */
+export interface OptionsJournee {
+  finJournee?: string;
+  heureDebutTravail?: string;
+  pauseDejeunerActive?: boolean;
+  heureDebutDejeuner?: string;
+  heureFinDejeuner?: string;
 }
 
 export interface PlanJournee {
@@ -33,17 +44,26 @@ function aujourdhuiA(heures: number, minutes: number): Date {
   return d;
 }
 
+interface OccupationEtiquetee extends Occupation {
+  label?: string;
+}
+
 /** Fusionne les occupations qui se chevauchent, bornées à la fenêtre de travail. */
-function fusionnerOccupations(occupations: Occupation[], debut: Date, fin: Date): Occupation[] {
+function fusionnerOccupations(
+  occupations: OccupationEtiquetee[],
+  debut: Date,
+  fin: Date,
+): OccupationEtiquetee[] {
   const bornees = occupations
     .map((o) => ({
       debut: new Date(Math.max(o.debut.getTime(), debut.getTime())),
       fin: new Date(Math.min(o.fin.getTime(), fin.getTime())),
+      label: o.label,
     }))
     .filter((o) => o.fin.getTime() > o.debut.getTime())
     .sort((a, b) => a.debut.getTime() - b.debut.getTime());
 
-  const fusion: Occupation[] = [];
+  const fusion: OccupationEtiquetee[] = [];
   for (const o of bornees) {
     const dernier = fusion[fusion.length - 1];
     if (dernier && o.debut.getTime() <= dernier.fin.getTime()) {
@@ -67,19 +87,27 @@ export function usePlanJournee(
   profilsEnergie: ProfilEnergie[],
   occupations: Occupation[] | null,
   energieEffective: NiveauEnergie | null,
-  finJournee: string | undefined,
+  options: OptionsJournee | string | undefined,
 ): PlanJournee {
+  // Compat : accepte encore un simple `finJournee` en chaîne (ancien appel).
+  const opts: OptionsJournee = typeof options === "string" ? { finJournee: options } : (options ?? {});
+
   return useMemo(() => {
-    // Début de la fenêtre : le début du tout premier créneau d'énergie (défaut
-    // 8h), pour ne pas remplir les heures avant que la journée de travail n'ait
-    // commencé si on consulte la page très tôt.
-    const heures = profilsEnergie.map((p) => p.heureDebut).sort();
-    const [hd, md] = (heures[0] ?? "08:00").split(":").map(Number);
+    // Début de la fenêtre : l'heure de début de journée type réglée dans
+    // Paramètres, sinon repli sur le début du tout premier créneau d'énergie
+    // (défaut 8h), pour ne pas remplir les heures avant que la journée de
+    // travail n'ait commencé si on consulte la page très tôt.
+    let heureDebut = opts.heureDebutTravail;
+    if (!heureDebut) {
+      const heures = profilsEnergie.map((p) => p.heureDebut).sort();
+      heureDebut = heures[0] ?? "08:00";
+    }
+    const [hd, md] = heureDebut.split(":").map(Number);
     const debutFenetre = aujourdhuiA(hd, md);
 
     // Fin de la fenêtre : la vraie "Fin de journée" réglée dans Paramètres —
     // avec ou sans Google Agenda, la proposition va jusque-là.
-    const [hf, mf] = (finJournee ?? "19:00").split(":").map(Number);
+    const [hf, mf] = (opts.finJournee ?? "19:00").split(":").map(Number);
     const finFenetre = aujourdhuiA(hf, mf);
 
     const maintenant = new Date();
@@ -88,7 +116,20 @@ export function usePlanJournee(
       return PLAN_VIDE;
     }
 
-    const occupes = fusionnerOccupations(occupations ?? [], depart, finFenetre);
+    // La pause déjeuner est traitée comme un bloc occupé au même titre que les
+    // créneaux Google Agenda : aucune tâche n'y est jamais proposée.
+    const occupationsEtDejeuner: OccupationEtiquetee[] = [...(occupations ?? [])];
+    if (opts.pauseDejeunerActive !== false) {
+      const [hdd, mdd] = (opts.heureDebutDejeuner ?? "12:30").split(":").map(Number);
+      const [hfd, mfd] = (opts.heureFinDejeuner ?? "13:00").split(":").map(Number);
+      const debutDejeuner = aujourdhuiA(hdd, mdd);
+      const finDejeuner = aujourdhuiA(hfd, mfd);
+      if (finDejeuner.getTime() > debutDejeuner.getTime()) {
+        occupationsEtDejeuner.push({ debut: debutDejeuner, fin: finDejeuner, label: "Pause déjeuner" });
+      }
+    }
+
+    const occupes = fusionnerOccupations(occupationsEtDejeuner, depart, finFenetre);
 
     // Tâches candidates : actives, de premier niveau.
     let restantes = taches
@@ -104,7 +145,7 @@ export function usePlanJournee(
       if (o.debut.getTime() > curseur.getTime()) {
         bornesLibres.push({ debut: new Date(curseur), fin: new Date(o.debut) });
       }
-      blocs.push({ debut: o.debut, fin: o.fin, type: "occupe" });
+      blocs.push({ debut: o.debut, fin: o.fin, type: "occupe", label: o.label });
       curseur = new Date(Math.max(curseur.getTime(), o.fin.getTime()));
     }
     if (curseur.getTime() < finFenetre.getTime()) {
@@ -152,5 +193,15 @@ export function usePlanJournee(
       .reduce((total, b) => total + minutesEntre(b.debut, b.fin), 0);
 
     return { blocs, minutesDisponibles, minutesPlanifiees, tachesProposees };
-  }, [profilsEnergie, taches, occupations, energieEffective, finJournee]);
+  }, [
+    profilsEnergie,
+    taches,
+    occupations,
+    energieEffective,
+    opts.finJournee,
+    opts.heureDebutTravail,
+    opts.pauseDejeunerActive,
+    opts.heureDebutDejeuner,
+    opts.heureFinDejeuner,
+  ]);
 }

@@ -97,13 +97,13 @@ function EcranAujourdhui() {
   }, [taches, maintenant]);
 
   // Charge du jour : mêmes chiffres que sur Planning, condensés en une ligne.
-  const plan = usePlanJournee(
-    taches,
-    profilsEnergie,
-    occupations,
-    energieEffective,
-    utilisateur?.finJournee,
-  );
+  const plan = usePlanJournee(taches, profilsEnergie, occupations, energieEffective, {
+    finJournee: utilisateur?.finJournee,
+    heureDebutTravail: utilisateur?.heureDebutTravail,
+    pauseDejeunerActive: utilisateur?.pauseDejeunerActive,
+    heureDebutDejeuner: utilisateur?.heureDebutDejeuner,
+    heureFinDejeuner: utilisateur?.heureFinDejeuner,
+  });
   const tachesUrgentes = useMemo(() => {
     const seuilJours = utilisateur?.seuilUrgenceJours ?? 3;
     return taches.filter(

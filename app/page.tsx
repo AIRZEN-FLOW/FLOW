@@ -7,12 +7,20 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
+import { CarteTache } from "@/components/CarteTache";
 import { useAuth } from "@/components/AuthProvider";
 import { useTaches } from "@/lib/hooks/useTaches";
 import { useProjets } from "@/lib/hooks/useProjets";
-import { calculerStatsPeriode, type PeriodeTableauBord } from "@/lib/dashboard";
+import { usePreferenceLocale } from "@/lib/hooks/usePreferenceLocale";
+import {
+  calculerStatsPeriode,
+  compterTachesParPeriode,
+  type PeriodeTableauBord,
+} from "@/lib/dashboard";
 import { QUADRANTS } from "@/lib/eisenhower";
 import { formatDuree } from "@/lib/format";
+import { IconeCalendrier } from "@/components/icones";
+import type { Quadrant, Tache } from "@/lib/types";
 
 const OPTIONS_PERIODE: { valeur: PeriodeTableauBord; label: string }[] = [
   { valeur: "jour", label: "Jour" },
@@ -20,16 +28,29 @@ const OPTIONS_PERIODE: { valeur: PeriodeTableauBord; label: string }[] = [
   { valeur: "mois", label: "Mois" },
 ];
 
+const ORDRE_QUADRANTS: Quadrant[] = ["q1", "q2", "q3", "q4"];
+const CLE_VUE_EISENHOWER = "airzen-dashboard-vue-eisenhower";
+
 function TableauDeBord() {
   const { profilsEnergie } = useAuth();
   const { taches, chargement: chargementTaches } = useTaches();
   const { projets, chargement: chargementProjets } = useProjets();
   const [periode, setPeriode] = useState<PeriodeTableauBord>("semaine");
+  const [vueEisenhower, setVueEisenhower] = usePreferenceLocale(CLE_VUE_EISENHOWER, false);
 
   const stats = useMemo(
     () => calculerStatsPeriode(taches, profilsEnergie, periode),
     [taches, profilsEnergie, periode],
   );
+
+  const comptes = useMemo(() => compterTachesParPeriode(taches), [taches]);
+
+  const tachesPeriode = stats.taches;
+  const parQuadrantPeriode = useMemo(() => {
+    const groupes: Record<Quadrant, Tache[]> = { q1: [], q2: [], q3: [], q4: [] };
+    for (const t of tachesPeriode) groupes[t.quadrantEisenhower].push(t);
+    return groupes;
+  }, [tachesPeriode]);
 
   const quadrantTotal = Math.max(
     1,
@@ -88,8 +109,78 @@ function TableauDeBord() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2.5">
+          {[
+            { label: "aujourd'hui", val: comptes.jour },
+            { label: "cette semaine", val: comptes.semaine },
+            { label: "ce mois-ci", val: comptes.mois },
+          ].map((c) => (
+            <div
+              key={c.label}
+              className="flex items-center gap-2 rounded-full bg-white px-3.5 py-2 shadow-sm"
+            >
+              <IconeCalendrier className="h-3.5 w-3.5 text-airzen-secondary" />
+              <span className="text-sm font-bold text-airzen-primary">{c.val}</span>
+              <span className="text-xs text-airzen-secondary">{c.label}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-1.5 rounded-full bg-white p-1 shadow-sm">
+          {(
+            [
+              { valeur: false, label: "Vue résumé" },
+              { valeur: true, label: "Vue Eisenhower" },
+            ] as const
+          ).map((o) => (
+            <button
+              key={String(o.valeur)}
+              type="button"
+              onClick={() => setVueEisenhower(o.valeur)}
+              className={`rounded-full px-4 py-2 text-[12.5px] font-medium transition-colors ${
+                vueEisenhower === o.valeur
+                  ? "bg-airzen-primary text-white"
+                  : "text-airzen-secondary hover:bg-airzen-bg"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {chargement ? (
         <p className="text-sm font-light text-airzen-secondary">Chargement…</p>
+      ) : vueEisenhower ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {ORDRE_QUADRANTS.map((q) => {
+            const liste = parQuadrantPeriode[q];
+            return (
+              <div key={q} className="flex flex-col gap-2.5">
+                <div
+                  className="rounded-xl px-3 py-2"
+                  style={{ backgroundColor: `${QUADRANTS[q].couleur}40` }}
+                >
+                  <p className="text-sm font-semibold text-airzen-primary">
+                    {QUADRANTS[q].label}
+                  </p>
+                  <p className="text-xs text-airzen-secondary">
+                    {liste.length} tâche{liste.length > 1 ? "s" : ""}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {liste.length === 0 ? (
+                    <p className="px-1 text-xs font-light text-airzen-neutral">
+                      Rien ici pour l&apos;instant.
+                    </p>
+                  ) : (
+                    liste.map((t) => <CarteTache key={t.id} tache={t} mode="priorite" />)
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.5fr_1fr_1fr]">
