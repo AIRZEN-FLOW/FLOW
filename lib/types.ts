@@ -90,6 +90,11 @@ export interface Tache {
   niveauEnergieRequis: NiveauEnergie;
   /** Plaisir procuré (optionnel : les tâches créées avant ce champ ne l'ont pas). */
   niveauPlaisir?: NiveauPlaisir;
+  /**
+   * Urgence ressentie par l'utilisatrice : true = « urgent pour moi »,
+   * false = « peut attendre », null / absent = l'app propose d'après l'échéance.
+   */
+  urgenceRessentie?: boolean | null;
   quadrantEisenhower: Quadrant; // calculé côté application
   /** Épinglée manuellement dans la colonne "Faire maintenant" (Q1) de la vue Priorités,
    * pour la garder sous les yeux sans changer son échéance ni son importance réelles. */
@@ -115,6 +120,8 @@ export interface SaisieTache {
   description?: string;
   dateEcheance?: Date | null;
   niveauImportance: NiveauImportance;
+  /** Voir Tache.urgenceRessentie — null / absent = l'app propose. */
+  urgenceRessentie?: boolean | null;
   dureeEstimeeMinutes: number;
   niveauEnergieRequis: NiveauEnergie;
   niveauPlaisir?: NiveauPlaisir;

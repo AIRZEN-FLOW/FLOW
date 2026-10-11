@@ -24,7 +24,7 @@ import {
   useOccupations,
 } from "@/lib/hooks/useOccupations";
 import { calculerSuggestions, type TempsDisponible } from "@/lib/matching";
-import { estUrgente, QUADRANTS } from "@/lib/eisenhower";
+import { QUADRANTS, urgenceEffective } from "@/lib/eisenhower";
 import { citationDuJour } from "@/lib/citations";
 import { formatDuree, tsEnDate } from "@/lib/format";
 import type { Quadrant, SaisieTache, Tache } from "@/lib/types";
@@ -109,7 +109,7 @@ function EcranAujourdhui() {
     return taches.filter(
       (t) =>
         (t.statut === "a_faire" || t.statut === "en_cours") &&
-        estUrgente(tsEnDate(t.dateEcheance), seuilJours, maintenant),
+        urgenceEffective(tsEnDate(t.dateEcheance), t.urgenceRessentie, seuilJours, maintenant),
     ).length;
   }, [taches, utilisateur?.seuilUrgenceJours, maintenant]);
 

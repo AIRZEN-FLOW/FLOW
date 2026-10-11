@@ -3,7 +3,7 @@
 // Carte de tâche : la brique de base, visible dans les listes et les suggestions
 // (voir docs/04-design-system.md §3). Une bande de couleur pleine sur le bord
 // gauche rend le quadrant Eisenhower reconnaissable d'un coup d'œil, en plus
-// du badge (voir components/BadgeQuadrant.tsx et LegendeQuadrants.tsx).
+// du badge (voir components/BadgeQuadrant.tsx et ExplicationMatrice.tsx).
 // Le titre est cliquable pour ouvrir directement l'édition (si onModifier fourni).
 import type { Tache } from "@/lib/types";
 import { BadgeQuadrant } from "@/components/BadgeQuadrant";

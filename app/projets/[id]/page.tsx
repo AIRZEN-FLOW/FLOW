@@ -15,7 +15,7 @@ import { FormulaireTache } from "@/components/FormulaireTache";
 import { CalendrierMois } from "@/components/calendrier/CalendrierMois";
 import { useProjets } from "@/lib/hooks/useProjets";
 import { useTaches } from "@/lib/hooks/useTaches";
-import { QUADRANTS, estUrgente } from "@/lib/eisenhower";
+import { QUADRANTS, urgenceEffective } from "@/lib/eisenhower";
 import { formatDureeCourt, formatEcheanceCourt, tsEnDate } from "@/lib/format";
 import { useAuth } from "@/components/AuthProvider";
 import { IconeGlisser } from "@/components/icones";
@@ -111,7 +111,7 @@ function VueGantt({
         {lignes.map(({ tache, debut, fin }) => {
           const left = ((debut.getTime() - debutMin) / total) * 100;
           const width = Math.max(3, ((fin.getTime() - debut.getTime()) / total) * 100);
-          const urgente = estUrgente(fin, seuilUrgenceJours);
+          const urgente = urgenceEffective(fin, tache.urgenceRessentie, seuilUrgenceJours);
           return (
             <div
               key={tache.id}

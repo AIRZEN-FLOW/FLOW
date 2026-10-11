@@ -19,7 +19,13 @@ import { calculerQuadrant } from "@/lib/eisenhower";
 
 /** Construit le quadrant à partir d'une saisie + le seuil d'urgence de l'utilisatrice. */
 function quadrantPourSaisie(saisie: SaisieTache, seuilJours: number) {
-  return calculerQuadrant(saisie.dateEcheance ?? null, saisie.niveauImportance, seuilJours);
+  return calculerQuadrant(
+    saisie.dateEcheance ?? null,
+    saisie.niveauImportance,
+    seuilJours,
+    undefined,
+    saisie.urgenceRessentie ?? null,
+  );
 }
 
 export async function creerTache(
@@ -37,6 +43,7 @@ export async function creerTache(
     statut: "a_faire" as StatutTache,
     dateEcheance: saisie.dateEcheance ? Timestamp.fromDate(saisie.dateEcheance) : null,
     niveauImportance: saisie.niveauImportance,
+    urgenceRessentie: saisie.urgenceRessentie ?? null,
     dureeEstimeeMinutes: saisie.dureeEstimeeMinutes,
     niveauEnergieRequis: saisie.niveauEnergieRequis,
     niveauPlaisir: saisie.niveauPlaisir ?? "moyenne",
@@ -95,6 +102,7 @@ export async function majTache(
     description: saisie.description?.trim() ?? "",
     dateEcheance: saisie.dateEcheance ? Timestamp.fromDate(saisie.dateEcheance) : null,
     niveauImportance: saisie.niveauImportance,
+    urgenceRessentie: saisie.urgenceRessentie ?? null,
     dureeEstimeeMinutes: saisie.dureeEstimeeMinutes,
     niveauEnergieRequis: saisie.niveauEnergieRequis,
     niveauPlaisir: saisie.niveauPlaisir ?? "moyenne",
