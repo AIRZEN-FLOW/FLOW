@@ -23,12 +23,17 @@ import {
   IconeCalendrier,
   IconeChevronDroite,
   IconeFermer,
+  IconeMail,
   IconeMenu,
   IconeProjetsNav,
   IconeReglagesNav,
   IconeTableauDeBord,
   IconeTachesNav,
 } from "@/components/icones";
+
+const LIEN_BETA_TESTEUR =
+  "mailto:contact.airzen@free.fr?subject=" +
+  encodeURIComponent("Retour bêta test AIR ZEN Flow");
 
 interface LienNav {
   href: string;
@@ -188,6 +193,13 @@ function ContenuSidebar({ onNaviguer }: { onNaviguer?: () => void }) {
           />
           Réglages
         </Link>
+        <a
+          href={LIEN_BETA_TESTEUR}
+          className="flex items-center gap-3 rounded-full px-3.5 py-2.5 text-sm font-medium text-airzen-secondary transition-colors hover:bg-airzen-bg hover:text-airzen-primary"
+        >
+          <IconeMail className="h-[19px] w-[19px] shrink-0 text-airzen-secondary" />
+          Commentaire bêta testeur
+        </a>
         <div className="flex items-center justify-between gap-2 px-3.5 pt-1">
           {utilisateur && (
             <span className="min-w-0 truncate text-xs text-airzen-neutral" title={utilisateur.nomAffiche}>

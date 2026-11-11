@@ -5,9 +5,11 @@
 // Ne rend rien à l'écran.
 import { useTaches } from "@/lib/hooks/useTaches";
 import { useRappels } from "@/lib/hooks/useRappels";
+import { useRappelPause } from "@/lib/hooks/useRappelPause";
 
 export function GestionnaireRappels() {
   const { taches } = useTaches();
   useRappels(taches);
+  useRappelPause();
   return null;
 }

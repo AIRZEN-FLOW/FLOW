@@ -24,9 +24,9 @@ Chaque tâche possède les champs suivants.
 
 ### Champ calculé : quadrant Eisenhower
 
-Le quadrant n'est **jamais saisi manuellement**. Il est recalculé automatiquement chaque fois que `date_echeance` ou `niveau_importance` change, selon la règle suivante :
+Principe : **l'app propose, l'utilisatrice ajuste** (retour beta, octobre 2026). Le quadrant n'est pas choisi directement : il est recalculé chaque fois que `date_echeance`, `niveau_importance` ou `urgence_ressentie` change, selon la règle suivante :
 
-- **Urgent** = la `date_echeance` est dans les **3 jours ou moins** (valeur ajustable dans les paramètres utilisateur, 3 jours par défaut). Une tâche sans échéance n'est jamais "urgente".
+- **Urgent** = l'`urgence_ressentie` si l'utilisatrice l'a indiquée (« Urgent pour moi » / « Peut attendre ») ; sinon, proposition automatique : la `date_echeance` est dans les **3 jours ou moins** (valeur ajustable dans les paramètres utilisateur, 3 jours par défaut). Sans échéance ni urgence ressentie, une tâche n'est pas "urgente".
 - **Important** = `niveau_importance` vaut `haute`.
 
 | Urgent | Important | Quadrant |
@@ -35,6 +35,8 @@ Le quadrant n'est **jamais saisi manuellement**. Il est recalculé automatiqueme
 | Non | Oui | **Q2 — Planifier** (important, pas urgent — le cœur du travail de fond) |
 | Oui | Non | **Q3 — Déléguer ou minimiser** (urgent, pas important) |
 | Non | Non | **Q4 — Éliminer ou différer** (ni urgent ni important) |
+
+> Transparence : le formulaire de tâche affiche en direct la priorité proposée et **pourquoi** (importance + urgence), avec une explication dépliable de la matrice pour les personnes qui ne la connaissent pas.
 
 > Note pédagogique pour l'interface : Q2 doit être visuellement valorisé (et non relégué), conformément à la philosophie AIR ZEN selon laquelle le travail de fond important-non-urgent est celui qui est le plus souvent sacrifié.
 

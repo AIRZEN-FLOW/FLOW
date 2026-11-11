@@ -67,6 +67,25 @@ export interface StatsPeriode {
   completionPct: number;
   completionLabel: string;
   quadrants: Record<Quadrant, number>;
+  /** Tâches (hors annulées) dont l'échéance tombe dans la période — pour la vue Eisenhower. */
+  taches: Tache[];
+}
+
+/** Nombre de tâches (hors annulées) dont l'échéance tombe dans chaque période, à date de référence. */
+export function compterTachesParPeriode(
+  taches: Tache[],
+  reference: Date = new Date(),
+): { jour: number; semaine: number; mois: number } {
+  function compter(periode: PeriodeTableauBord): number {
+    const { debut, fin } = plagePeriode(periode, reference);
+    return taches.filter((t) => {
+      if (t.statut === "annulee") return false;
+      const echeance = tsEnDate(t.dateEcheance);
+      if (!echeance) return false;
+      return echeance.getTime() >= debut.getTime() && echeance.getTime() < fin.getTime();
+    }).length;
+  }
+  return { jour: compter("jour"), semaine: compter("semaine"), mois: compter("mois") };
 }
 
 const SOUS_TITRE: Record<PeriodeTableauBord, string> = {
@@ -176,5 +195,6 @@ export function calculerStatsPeriode(
     completionPct,
     completionLabel: COMPLETION_LABEL[periode],
     quadrants,
+    taches: tachesPeriode,
   };
 }
