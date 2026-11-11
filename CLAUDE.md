@@ -71,6 +71,9 @@ Architecture mise en place :
   `lib/data/*` (CRUD Firestore), `lib/google/calendar.ts` (lecture seule, serveur)
 - `lib/hooks/*` (useTaches, useProjets, useEnergieMoment, useOccupations)
 - `components/AuthProvider.tsx`, `RequireAuth`, `AppShell`, `ModaleDecoupage`
-- Écrans : `/login`, `/` (suggestions), `/taches`, `/planning`, `/projets`, `/parametres`
+- Écrans : `/login`, `/` (« Maintenant » : suggestions), `/taches`, `/projets`, `/parametres`
+- Menu volontairement limité à 3 entrées (Maintenant, Mes tâches, Projets) ; barre du bas
+  sur téléphone. `/planning`, `/bilan` (statistiques) et `/terminees` sont des écrans
+  secondaires, ouverts par des liens discrets — ne pas les remettre dans le menu.
 - Routes API : `/api/decoupage` (IA), `/api/google/*` (OAuth + freeBusy), `/api/sante`
 - PWA : `app/manifest.ts`, `public/sw.js`, icônes `public/icons/`

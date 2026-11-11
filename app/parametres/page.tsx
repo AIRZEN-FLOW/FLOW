@@ -98,7 +98,7 @@ function SectionAccueil() {
           onChange={(e) => setCitationVisible(e.target.checked)}
           className="h-4 w-4 accent-airzen-primary"
         />
-        Afficher la citation du jour sur l&apos;écran Aujourd&apos;hui
+        Afficher la citation du jour sur l&apos;écran Maintenant
       </label>
     </PanneauReglage>
   );
@@ -519,7 +519,7 @@ function Reglages() {
             </label>
           </div>
           <p className="text-xs font-light text-airzen-neutral">
-            Passé l&apos;heure de fin, l&apos;écran Aujourd&apos;hui vous le signale
+            Passé l&apos;heure de fin, l&apos;écran Maintenant vous le signale
             doucement au lieu de continuer à proposer des tâches.
           </p>
         </PanneauReglage>
