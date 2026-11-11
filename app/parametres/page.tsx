@@ -31,7 +31,7 @@ function SectionAccueil() {
           onChange={(e) => setCitationVisible(e.target.checked)}
           className="h-4 w-4 accent-airzen-primary"
         />
-        Afficher la citation du jour sur l&apos;écran Aujourd&apos;hui
+        Afficher la citation du jour sur l&apos;écran Maintenant
       </label>
     </section>
   );
@@ -314,7 +314,7 @@ function Reglages() {
       <section className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
         <h2 className="font-semibold text-airzen-primary">Fin de journée</h2>
         <p className="text-sm font-light text-airzen-secondary">
-          Passé cette heure, l&apos;écran Aujourd&apos;hui vous le signale doucement au
+          Passé cette heure, l&apos;écran Maintenant vous le signale doucement au
           lieu de continuer à proposer des tâches — libre à vous de les afficher quand
           même si besoin.
         </p>

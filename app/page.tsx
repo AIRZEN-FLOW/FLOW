@@ -1,221 +1,406 @@
 "use client";
 
-// Tableau de bord — vue d'ensemble (nouvel écran d'accueil, voir "AIR ZEN
-// Flow.dc.html"). Le fil de suggestions "Aujourd'hui" a déménagé vers
-// /aujourdhui ; cet écran donne une vue d'ensemble jour/semaine/mois.
+// Écran "Maintenant" — l'accueil de l'appli : « je fais quoi, là ? »
+// On indique son énergie et son temps disponible, l'appli propose 3 tâches
+// (une mise en avant, deux pour ensuite). Le bilan chiffré vit sur /bilan et
+// le planning sur /planning, accessibles par des liens discrets en bas d'écran.
+// Croise énergie du moment × temps disponible × quadrant Eisenhower.
+// Si Google Agenda est connecté, le temps disponible est déduit du prochain
+// rendez-vous ; le choix manuel reste prioritaire.
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/components/AuthProvider";
+import { MessageFinJournee } from "@/components/MessageFinJournee";
+import { EnTeteAccueil } from "@/components/EnTeteAccueil";
+import { CarteTache } from "@/components/CarteTache";
+import { FormulaireTache } from "@/components/FormulaireTache";
+import { BadgeQuadrant } from "@/components/BadgeQuadrant";
 import { useTaches } from "@/lib/hooks/useTaches";
 import { useProjets } from "@/lib/hooks/useProjets";
-import { calculerStatsPeriode, type PeriodeTableauBord } from "@/lib/dashboard";
-import { QUADRANTS } from "@/lib/eisenhower";
-import { formatDuree } from "@/lib/format";
+import { useEnergieMoment } from "@/lib/hooks/useEnergieMoment";
+import { useHorloge } from "@/lib/hooks/useHorloge";
+import { usePlanJournee } from "@/lib/hooks/usePlanJournee";
+import {
+  minutesAvantProchaineOccupation,
+  useOccupations,
+} from "@/lib/hooks/useOccupations";
+import { calculerSuggestions, type TempsDisponible } from "@/lib/matching";
+import { estUrgente, QUADRANTS } from "@/lib/eisenhower";
+import { formatDuree, tsEnDate } from "@/lib/format";
+import type { Quadrant, SaisieTache, Tache } from "@/lib/types";
 
-const OPTIONS_PERIODE: { valeur: PeriodeTableauBord; label: string }[] = [
-  { valeur: "jour", label: "Jour" },
-  { valeur: "semaine", label: "Semaine" },
-  { valeur: "mois", label: "Mois" },
+const OPTIONS_TEMPS: { valeur: TempsDisponible; label: string }[] = [
+  { valeur: 15, label: "15 min" },
+  { valeur: 30, label: "30 min" },
+  { valeur: 60, label: "1 h" },
+  { valeur: "plus", label: "Plus" },
 ];
 
-function TableauDeBord() {
-  const { profilsEnergie } = useAuth();
-  const { taches, chargement: chargementTaches } = useTaches();
-  const { projets, chargement: chargementProjets } = useProjets();
-  const [periode, setPeriode] = useState<PeriodeTableauBord>("semaine");
+function heureCourte(d: Date): string {
+  return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
 
-  const stats = useMemo(
-    () => calculerStatsPeriode(taches, profilsEnergie, periode),
-    [taches, profilsEnergie, periode],
-  );
+function EcranMaintenant() {
+  const { utilisateur, profilsEnergie } = useAuth();
+  const { taches, chargement, modifier, terminer } = useTaches();
+  const { projets } = useProjets();
+  const { energieEffective, ajustementManuel, definirOverride, reinitialiser } =
+    useEnergieMoment();
+  const { occupations, connecte } = useOccupations();
+  // Choix manuel (prioritaire) ; null = suivre l'agenda (ou 30 min par défaut).
+  const [tempsChoisi, setTempsChoisi] = useState<TempsDisponible | null>(null);
+  const [tacheEnEdition, setTacheEnEdition] = useState<Tache | null>(null);
+  const [enregistrement, setEnregistrement] = useState(false);
+  const [bilanVisible, setBilanVisible] = useState(false);
+  const maintenant = useHorloge();
+  const [voirQuandMeme, setVoirQuandMeme] = useState(false);
 
-  const quadrantTotal = Math.max(
-    1,
-    stats.quadrants.q1 + stats.quadrants.q2 + stats.quadrants.q3 + stats.quadrants.q4,
-  );
-  const p1 = (stats.quadrants.q1 / quadrantTotal) * 100;
-  const p2 = p1 + (stats.quadrants.q2 / quadrantTotal) * 100;
-  const p3 = p2 + (stats.quadrants.q3 / quadrantTotal) * 100;
+  // Fin de journée choisie dans Réglages (défaut 19h) : passé cette heure,
+  // on n'insiste plus pour proposer des tâches — le repos aussi compte.
+  const journeeTerminee = useMemo(() => {
+    const [h, m] = (utilisateur?.finJournee ?? "19:00").split(":").map(Number);
+    const seuil = new Date(
+      maintenant.getFullYear(),
+      maintenant.getMonth(),
+      maintenant.getDate(),
+      h,
+      m,
+    );
+    return maintenant.getTime() >= seuil.getTime();
+  }, [utilisateur?.finJournee, maintenant]);
 
-  const projetsActifs = useMemo(() => {
-    const parProjet = new Map<string, { total: number; termine: number }>();
+  // Petite reconnaissance douce : tâches accomplies au cours des 7 derniers jours,
+  // détaillées par quadrant pour le mini bilan (badge cliquable).
+  const bilanParQuadrant = useMemo(() => {
+    const ilYA7Jours = maintenant.getTime() - 7 * 24 * 60 * 60 * 1000;
+    const compte: Record<Quadrant, number> = { q1: 0, q2: 0, q3: 0, q4: 0 };
     for (const t of taches) {
-      if (!t.projetId || t.statut === "annulee") continue;
-      const c = parProjet.get(t.projetId) ?? { total: 0, termine: 0 };
-      c.total++;
-      if (t.statut === "terminee") c.termine++;
-      parProjet.set(t.projetId, c);
+      if (t.statut !== "terminee") continue;
+      const mod = tsEnDate(t.modifieLe ?? null);
+      if (mod && mod.getTime() >= ilYA7Jours) compte[t.quadrantEisenhower]++;
     }
-    return projets
-      .filter((p) => p.statut === "actif")
-      .map((p) => {
-        const c = parProjet.get(p.id) ?? { total: 0, termine: 0 };
-        return {
-          projet: p,
-          pct: c.total > 0 ? Math.round((c.termine / c.total) * 100) : 0,
-        };
-      });
-  }, [projets, taches]);
+    return compte;
+  }, [taches, maintenant]);
+  const termineesCetteSemaine =
+    bilanParQuadrant.q1 + bilanParQuadrant.q2 + bilanParQuadrant.q3 + bilanParQuadrant.q4;
 
-  const chargement = chargementTaches || chargementProjets;
+  // Rappel doux pour le quadrant Q2 (important, pas urgent) : c'est celui
+  // qu'on laisse le plus facilement de côté puisque rien ne presse.
+  const q2EnAttente = useMemo(() => {
+    const seuilMs = 7 * 24 * 60 * 60 * 1000;
+    return taches.filter((t) => {
+      if (t.statut !== "a_faire" && t.statut !== "en_cours") return false;
+      if (t.quadrantEisenhower !== "q2" || t.tacheParenteId) return false;
+      const cree = tsEnDate(t.creeLe ?? null);
+      return cree ? maintenant.getTime() - cree.getTime() >= seuilMs : false;
+    }).length;
+  }, [taches, maintenant]);
+
+  // Charge du jour : mêmes chiffres que sur Planning, condensés en une ligne.
+  const plan = usePlanJournee(
+    taches,
+    profilsEnergie,
+    occupations,
+    energieEffective,
+    utilisateur?.finJournee,
+  );
+  const tachesUrgentes = useMemo(() => {
+    const seuilJours = utilisateur?.seuilUrgenceJours ?? 3;
+    return taches.filter(
+      (t) =>
+        (t.statut === "a_faire" || t.statut === "en_cours") &&
+        estUrgente(tsEnDate(t.dateEcheance), seuilJours, maintenant),
+    ).length;
+  }, [taches, utilisateur?.seuilUrgenceJours, maintenant]);
+
+  async function enregistrerModification(saisie: SaisieTache) {
+    if (!tacheEnEdition) return;
+    setEnregistrement(true);
+    try {
+      await modifier(tacheEnEdition.id, saisie);
+      setTacheEnEdition(null);
+    } finally {
+      setEnregistrement(false);
+    }
+  }
+
+  // Temps déduit de l'agenda : minutes avant le prochain rendez-vous.
+  const agenda = useMemo(() => {
+    if (!connecte || !occupations) return null;
+    return { creneau: minutesAvantProchaineOccupation(occupations) };
+  }, [connecte, occupations]);
+
+  const tempsAuto: TempsDisponible | number | null = agenda
+    ? agenda.creneau === null
+      ? "plus" // plus aucun rendez-vous aujourd'hui
+      : agenda.creneau.minutes
+    : null;
+
+  const tempsEffectif: TempsDisponible | number = tempsChoisi ?? tempsAuto ?? 30;
+
+  const suggestions = useMemo(() => {
+    const avecEcheance = taches.map((t) => ({
+      ...t,
+      echeanceDate: tsEnDate(t.dateEcheance),
+    }));
+    return calculerSuggestions(avecEcheance, energieEffective, tempsEffectif, 3);
+  }, [taches, energieEffective, tempsEffectif]);
+
+  const [principale, ...ensuite] = suggestions;
+
+  const aucuneTache =
+    !chargement &&
+    taches.filter((t) => t.statut !== "terminee" && t.statut !== "annulee").length === 0;
+
+  const prenom = utilisateur?.nomAffiche?.split(" ")[0];
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-airzen-primary sm:text-[27px]">
-            Tableau de bord
-          </h1>
-          <p className="mt-1 text-sm font-light text-airzen-secondary">{stats.sousTitre}</p>
-        </div>
-        <div className="flex gap-1.5 rounded-full bg-white p-1 shadow-sm">
-          {OPTIONS_PERIODE.map((o) => (
-            <button
-              key={o.valeur}
-              type="button"
-              onClick={() => setPeriode(o.valeur)}
-              className={`rounded-full px-4 py-2 text-[12.5px] font-medium transition-colors ${
-                periode === o.valeur
-                  ? "bg-airzen-primary text-white"
-                  : "text-airzen-secondary hover:bg-airzen-bg"
-              }`}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-airzen-primary sm:text-[27px]">
+          Maintenant
+        </h1>
+        {termineesCetteSemaine > 0 && (
+          <button
+            type="button"
+            onClick={() => setBilanVisible((v) => !v)}
+            className="shrink-0 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-airzen-primary shadow-sm ring-1 ring-airzen-accent/40 transition-opacity hover:opacity-80"
+          >
+            😊 {termineesCetteSemaine} cette semaine
+          </button>
+        )}
       </div>
 
-      {chargement ? (
-        <p className="text-sm font-light text-airzen-secondary">Chargement…</p>
+      {bilanVisible && termineesCetteSemaine > 0 && (
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <p className="text-sm font-medium text-airzen-primary">
+            Cette semaine, par priorité
+          </p>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {(["q1", "q2", "q3", "q4"] as Quadrant[]).map((q) => (
+              <li key={q} className="flex items-center gap-2 text-sm text-airzen-secondary">
+                <span
+                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: QUADRANTS[q].couleur }}
+                />
+                <span className="flex-1">{QUADRANTS[q].label}</span>
+                <span className="font-medium text-airzen-primary">
+                  {bilanParQuadrant[q]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {q2EnAttente > 0 && (
+        <Link
+          href="/taches?mode=priorites"
+          className="flex items-center gap-2 rounded-xl bg-q2/10 px-4 py-2.5 text-sm text-airzen-primary transition-opacity hover:opacity-80"
+        >
+          <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-q2" aria-hidden />
+          <span>
+            {q2EnAttente} tâche{q2EnAttente > 1 ? "s" : ""} importante
+            {q2EnAttente > 1 ? "s" : ""} en attente depuis plus de 7 jours
+          </span>
+          <span className="ml-auto shrink-0 font-medium">→</span>
+        </Link>
+      )}
+
+      {tacheEnEdition && (
+        <FormulaireTache
+          valeursInitiales={tacheEnEdition}
+          onValider={enregistrerModification}
+          onAnnuler={() => setTacheEnEdition(null)}
+          enCours={enregistrement}
+          projets={projets}
+          tachesParentes={taches.filter(
+            (t) => !t.tacheParenteId && t.id !== tacheEnEdition.id,
+          )}
+        />
+      )}
+
+      {journeeTerminee && !voirQuandMeme ? (
+        <MessageFinJournee onVoirQuandMeme={() => setVoirQuandMeme(true)} />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.5fr_1fr_1fr]">
-            <div className="flex flex-col gap-2 rounded-2xl bg-white p-5 shadow-sm">
-              <p className="text-[13px] font-semibold text-airzen-primary">
-                Temps planifié vs disponible
-              </p>
-              <p className="text-xs text-airzen-secondary">{stats.planLabel}</p>
-              <div className="mt-1.5 flex h-14 items-end gap-1.5">
-                {stats.bars.map((b, i) => (
-                  <div
-                    key={i}
-                    className="relative h-full flex-1 rounded bg-airzen-bg"
-                    title={b.label}
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
+            <EnTeteAccueil prenom={prenom} maintenant={maintenant} />
+            <div className="mt-3 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-8">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="w-24 shrink-0 text-xs font-medium text-airzen-primary sm:w-auto">
+                  Mon énergie
+                </span>
+                {(["haute", "moyenne", "basse"] as const).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => definirOverride(n)}
+                    aria-pressed={energieEffective === n}
+                    className={`rounded-full px-3.5 py-1.5 text-xs transition-colors ${
+                      energieEffective === n
+                        ? "bg-airzen-primary font-medium text-white"
+                        : "bg-airzen-bg text-airzen-secondary hover:bg-airzen-neutral/30"
+                    }`}
                   >
-                    <div
-                      className="absolute bottom-0 w-full rounded bg-airzen-secondary"
-                      style={{ height: `${Math.max(4, b.hauteur)}%` }}
-                    />
-                  </div>
+                    {n === "haute" ? "Haute" : n === "moyenne" ? "Moyenne" : "Basse"}
+                  </button>
                 ))}
+                {ajustementManuel && (
+                  <button
+                    type="button"
+                    onClick={reinitialiser}
+                    className="text-xs text-airzen-neutral hover:text-airzen-secondary"
+                  >
+                    auto
+                  </button>
+                )}
               </div>
-              <div className="flex gap-1.5">
-                {stats.bars.map((b, i) => (
-                  <span key={i} className="flex-1 text-center text-[10px] text-airzen-neutral">
-                    {b.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-2 rounded-2xl bg-white p-[18px] shadow-sm">
-              <div
-                className="flex h-[104px] w-[104px] items-center justify-center rounded-full"
-                style={{
-                  background:
-                    stats.totalTaches > 0
-                      ? `conic-gradient(${QUADRANTS.q1.couleur} 0% ${p1}%, ${QUADRANTS.q2.couleur} ${p1}% ${p2}%, ${QUADRANTS.q3.couleur} ${p2}% ${p3}%, ${QUADRANTS.q4.couleur} ${p3}% 100%)`
-                      : "#F5F7F8",
-                }}
-              >
-                <div className="flex h-[74px] w-[74px] flex-col items-center justify-center rounded-full bg-white">
-                  <span className="text-lg font-bold text-airzen-primary">
-                    {stats.totalTaches}
-                  </span>
-                  <span className="text-[10px] text-airzen-secondary">tâches</span>
-                </div>
-              </div>
-              <p className="text-center text-xs font-semibold text-airzen-primary">
-                Répartition Eisenhower
-              </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {(["q1", "q2", "q3", "q4"] as const).map((q) => (
-                  <span key={q} className="text-[10px] text-airzen-secondary">
-                    <span
-                      className="mr-0.5 inline-block h-1.5 w-1.5 rounded-full align-middle"
-                      style={{ backgroundColor: QUADRANTS[q].couleur }}
-                    />
-                    {QUADRANTS[q].court} {stats.quadrants[q]}
-                  </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="w-24 shrink-0 text-xs font-medium text-airzen-primary sm:w-auto">
+                  Mon temps
+                </span>
+                {OPTIONS_TEMPS.map((o) => (
+                  <button
+                    key={String(o.valeur)}
+                    type="button"
+                    onClick={() => setTempsChoisi(o.valeur)}
+                    aria-pressed={tempsChoisi === o.valeur}
+                    className={`rounded-full px-3.5 py-1.5 text-xs transition-colors ${
+                      tempsChoisi === o.valeur
+                        ? "bg-airzen-primary font-medium text-white"
+                        : "bg-airzen-bg text-airzen-secondary hover:bg-airzen-neutral/30"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
                 ))}
               </div>
             </div>
-
-            <div className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-white p-[18px] shadow-sm">
-              <div
-                className="flex h-24 w-24 items-center justify-center rounded-full"
-                style={{
-                  background: `conic-gradient(#EDC426 0% ${stats.completionPct}%, #F5F7F8 ${stats.completionPct}% 100%)`,
-                }}
-              >
-                <div className="flex h-[70px] w-[70px] items-center justify-center rounded-full bg-white text-[19px] font-bold text-airzen-primary">
-                  {stats.completionPct}%
-                </div>
-              </div>
-              <p className="text-center text-xs font-semibold text-airzen-primary">
-                {stats.completionLabel}
+            {agenda && agenda.creneau !== null && tempsChoisi === null ? (
+              <p className="mt-2 text-xs text-airzen-secondary">
+                📅 Prochain rendez-vous à{" "}
+                <span className="font-semibold text-airzen-primary">
+                  {heureCourte(agenda.creneau.prochaine.debut)}
+                </span>{" "}
+                — environ{" "}
+                <span className="font-semibold text-airzen-primary">
+                  {agenda.creneau.minutes} min
+                </span>{" "}
+                devant vous.
               </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-[13px] font-semibold text-airzen-primary">Projets actifs</p>
-            {projetsActifs.length === 0 ? (
-              <p className="text-sm font-light text-airzen-secondary">
-                Aucun projet actif pour l&apos;instant.{" "}
-                <Link href="/projets" className="font-medium underline underline-offset-2">
-                  En créer un
-                </Link>
+            ) : agenda && agenda.creneau === null && tempsChoisi === null ? (
+              <p className="mt-2 text-xs text-airzen-secondary">
+                📅 Plus aucun rendez-vous aujourd&apos;hui — la journée vous appartient.
               </p>
-            ) : (
-              projetsActifs.map(({ projet, pct }) => (
-                <Link
-                  key={projet.id}
-                  href={`/projets/${projet.id}`}
-                  className="flex items-center gap-3 rounded-xl px-1 py-1 transition-colors hover:bg-airzen-bg"
-                >
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: projet.couleur }}
-                  />
-                  <span className="flex-1 truncate text-[13px] text-airzen-primary">
-                    {projet.nom}
-                  </span>
-                  <div className="h-1.5 w-28 shrink-0 rounded-full bg-airzen-bg">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${pct}%`, backgroundColor: projet.couleur }}
-                    />
-                  </div>
-                  <span className="w-9 shrink-0 text-right text-xs text-airzen-secondary">
-                    {pct}%
-                  </span>
-                </Link>
-              ))
+            ) : null}
+            {!chargement && (tachesUrgentes > 0 || plan.minutesDisponibles > 0) && (
+              <p className="mt-2 text-xs font-light text-airzen-secondary">
+                {tachesUrgentes > 0 &&
+                  `${tachesUrgentes} tâche${tachesUrgentes > 1 ? "s" : ""} urgente${tachesUrgentes > 1 ? "s" : ""}`}
+                {tachesUrgentes > 0 && plan.minutesDisponibles > 0 && " · "}
+                {plan.minutesDisponibles > 0 &&
+                  `${formatDuree(plan.minutesPlanifiees)} planifiée${plan.minutesPlanifiees > 1 ? "s" : ""} sur ${formatDuree(plan.minutesDisponibles)} disponible${plan.minutesDisponibles > 1 ? "s" : ""} aujourd'hui`}
+              </p>
             )}
           </div>
 
-          {stats.planifieMinutes > 0 && (
-            <p className="text-xs font-light text-airzen-neutral">
-              Basé sur les tâches dont l&apos;échéance tombe {periode === "jour" ? "aujourd'hui" : periode === "semaine" ? "cette semaine" : "ce mois-ci"}
-              {" "}({formatDuree(stats.planifieMinutes)} au total).
-            </p>
+          {chargement ? (
+            <p className="text-sm font-light text-airzen-secondary">Chargement…</p>
+          ) : aucuneTache ? (
+            <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
+              <p className="font-light text-airzen-secondary">
+                Vous n&apos;avez pas encore de tâche.
+              </p>
+              <Link
+                href="/taches"
+                className="mt-4 inline-block rounded-full bg-airzen-accent px-5 py-2.5 font-semibold text-airzen-primary transition-opacity hover:opacity-90"
+              >
+                Ajouter ma première tâche
+              </Link>
+            </div>
+          ) : suggestions.length === 0 ? (
+            <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
+              <p className="font-light text-airzen-secondary">
+                Rien ne colle parfaitement à ce créneau et à votre énergie là, maintenant.
+                C&apos;est peut-être le bon moment pour souffler 🌿
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+              <section className="flex flex-1 flex-col gap-3.5 lg:flex-[1.5]">
+                <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-airzen-secondary">
+                  ✨ Pour vous, maintenant
+                </p>
+                <div
+                  className="rounded-[20px] border border-airzen-neutral/50 bg-white p-6"
+                  style={{ boxShadow: "8px 8px 0 0 #EDC426" }}
+                >
+                  <BadgeQuadrant quadrant={principale.tache.quadrantEisenhower} />
+                  <button
+                    type="button"
+                    onClick={() => setTacheEnEdition(principale.tache)}
+                    className="mt-3 block text-left text-lg font-semibold text-airzen-primary hover:underline sm:text-xl"
+                  >
+                    {principale.tache.titre}
+                  </button>
+                  {principale.raison && (
+                    <p className="mt-2 text-sm font-light text-airzen-secondary">
+                      {principale.raison}
+                    </p>
+                  )}
+                  <div className="mt-4 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => terminer(principale.tache.id)}
+                      className="rounded-full bg-airzen-accent px-4 py-2 text-sm font-semibold text-airzen-primary transition-opacity hover:opacity-90"
+                    >
+                      Terminer
+                    </button>
+                    <span className="text-xs text-airzen-secondary">
+                      {formatDuree(principale.tache.dureeEstimeeMinutes)}
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              <section className="flex flex-1 flex-col gap-3 border-airzen-neutral/40 lg:border-l lg:pl-6">
+                <p className="text-xs font-bold uppercase tracking-wide text-airzen-neutral">
+                  Ensuite
+                </p>
+                {ensuite.length === 0 ? (
+                  <p className="text-sm font-light text-airzen-secondary">
+                    Rien d&apos;autre à proposer pour l&apos;instant.
+                  </p>
+                ) : (
+                  ensuite.map((s) => (
+                    <CarteTache
+                      key={s.tache.id}
+                      tache={s.tache}
+                      mode="priorite"
+                      attenue={s.secondPlan}
+                      onModifier={setTacheEnEdition}
+                      onTerminer={(t) => terminer(t.id)}
+                    />
+                  ))
+                )}
+              </section>
+            </div>
           )}
         </>
       )}
+
+      {/* Liens discrets vers les écrans secondaires (hors menu principal). */}
+      <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-airzen-neutral/30 pt-4 text-xs font-medium text-airzen-secondary">
+        <Link href="/planning" className="hover:text-airzen-primary">
+          Ma journée proposée →
+        </Link>
+        <Link href="/bilan" className="hover:text-airzen-primary">
+          Mon bilan →
+        </Link>
+      </nav>
     </div>
   );
 }
@@ -224,7 +409,7 @@ export default function Page() {
   return (
     <RequireAuth>
       <AppShell>
-        <TableauDeBord />
+        <EcranMaintenant />
       </AppShell>
     </RequireAuth>
   );

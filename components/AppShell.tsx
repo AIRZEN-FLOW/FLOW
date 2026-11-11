@@ -1,12 +1,12 @@
 "use client";
 
-// Coque des écrans connectés : barre latérale de navigation (desktop) qui
-// devient un tiroir coulissant sur mobile, plus le contenu de l'écran.
-// Refonte visuelle (voir "AIR ZEN Flow.dc.html") : la navigation horizontale
-// texte-seul a été remplacée par une sidebar avec icônes et sous-menu Projets.
+// Coque des écrans connectés. La navigation tient en 3 entrées (Maintenant,
+// Mes tâches, Projets) : barre latérale sur ordinateur, barre fixe en bas sur
+// téléphone (toujours visible, pas de menu caché). Réglages est une icône ;
+// Planning, Mon bilan et Tâches terminées s'ouvrent par des liens dans les écrans.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { LogoAirZen } from "@/components/LogoAirZen";
 import { GestionnaireRappels } from "@/components/GestionnaireRappels";
@@ -20,13 +20,8 @@ import { libelleNiveau } from "@/lib/energie";
 import { formatDuree } from "@/lib/format";
 import {
   IconeAujourdhui,
-  IconeCalendrier,
-  IconeChevronDroite,
-  IconeFermer,
-  IconeMenu,
   IconeProjetsNav,
   IconeReglagesNav,
-  IconeTableauDeBord,
   IconeTachesNav,
 } from "@/components/icones";
 
@@ -37,14 +32,18 @@ interface LienNav {
 }
 
 const NAVIGATION: LienNav[] = [
-  { href: "/", label: "Tableau de bord", icone: IconeTableauDeBord },
-  { href: "/aujourdhui", label: "Aujourd'hui", icone: IconeAujourdhui },
-  { href: "/taches", label: "Tâches", icone: IconeTachesNav },
-  { href: "/planning", label: "Planning", icone: IconeCalendrier },
+  { href: "/", label: "Maintenant", icone: IconeAujourdhui },
+  { href: "/taches", label: "Mes tâches", icone: IconeTachesNav },
+  { href: "/projets", label: "Projets", icone: IconeProjetsNav },
 ];
 
+// "/" n'est actif que sur l'accueil ; les autres le sont aussi sur leurs sous-pages.
+function estActif(pathname: string, href: string): boolean {
+  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+}
+
 // Bandeau discret : énergie du moment + temps avant le prochain rendez-vous,
-// pour un repère permanent sans avoir à aller sur "Aujourd'hui".
+// pour un repère permanent sans avoir à revenir sur "Maintenant".
 function BentoEnergie() {
   const { energieEffective } = useEnergieMoment();
   const { occupations, connecte } = useOccupations();
@@ -70,11 +69,10 @@ function BentoEnergie() {
   );
 }
 
-function ContenuSidebar({ onNaviguer }: { onNaviguer?: () => void }) {
+function ContenuSidebar() {
   const pathname = usePathname();
   const { utilisateur, seDeconnecter } = useAuth();
   const { projets } = useProjets();
-  const [projetsOuvert, setProjetsOuvert] = useState(true);
 
   const projetsActifs = projets.filter((p) => p.statut === "actif");
   const surEcranProjets = pathname.startsWith("/projets");
@@ -82,20 +80,19 @@ function ContenuSidebar({ onNaviguer }: { onNaviguer?: () => void }) {
   return (
     <div className="flex h-full flex-col justify-between gap-5 overflow-y-auto p-4">
       <div className="flex flex-col gap-5">
-        <Link href="/" onClick={onNaviguer} className="flex items-center gap-2.5 px-2 py-0.5">
+        <Link href="/" className="flex items-center gap-2.5 px-2 py-0.5">
           <LogoAirZen taille={32} />
           <span className="text-[15px] font-semibold text-airzen-primary">AIR ZEN Flow</span>
         </Link>
 
         <nav className="flex flex-col gap-0.5">
           {NAVIGATION.map((lien) => {
-            const actif = lien.href === "/" ? pathname === "/" : pathname.startsWith(lien.href);
+            const actif = estActif(pathname, lien.href);
             const Icone = lien.icone;
             return (
               <Link
                 key={lien.href}
                 href={lien.href}
-                onClick={onNaviguer}
                 className={`flex items-center gap-3 rounded-full px-3.5 py-2.5 text-sm transition-colors ${
                   actif
                     ? "bg-airzen-accent/25 font-semibold text-airzen-primary"
@@ -108,38 +105,8 @@ function ContenuSidebar({ onNaviguer }: { onNaviguer?: () => void }) {
             );
           })}
 
-          <div className="flex items-center gap-1">
-            <Link
-              href="/projets"
-              onClick={onNaviguer}
-              className={`flex flex-1 items-center gap-3 rounded-full px-3.5 py-2.5 text-sm transition-colors ${
-                surEcranProjets
-                  ? "bg-airzen-accent/25 font-semibold text-airzen-primary"
-                  : "font-medium text-airzen-secondary hover:bg-airzen-bg hover:text-airzen-primary"
-              }`}
-            >
-              <IconeProjetsNav
-                className={`h-[19px] w-[19px] shrink-0 ${surEcranProjets ? "text-airzen-primary" : "text-airzen-secondary"}`}
-              />
-              Projets
-            </Link>
-            {projetsActifs.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setProjetsOuvert((v) => !v)}
-                aria-label={projetsOuvert ? "Réduire la liste des projets" : "Déplier la liste des projets"}
-                className="shrink-0 rounded-full p-2 text-airzen-secondary transition-colors hover:bg-airzen-bg"
-              >
-                <IconeChevronDroite
-                  className={`h-3.5 w-3.5 transition-transform ${
-                    projetsOuvert ? "rotate-90" : "rotate-0"
-                  }`}
-                />
-              </button>
-            )}
-          </div>
-
-          {projetsOuvert && projetsActifs.length > 0 && (
+          {/* Raccourcis vers les projets actifs, seulement quand on est dans Projets. */}
+          {surEcranProjets && projetsActifs.length > 0 && (
             <div className="mt-0.5 flex flex-col gap-0.5 pl-[30px]">
               {projetsActifs.map((p) => {
                 const actif = pathname.startsWith(`/projets/${p.id}`);
@@ -147,7 +114,6 @@ function ContenuSidebar({ onNaviguer }: { onNaviguer?: () => void }) {
                   <Link
                     key={p.id}
                     href={`/projets/${p.id}`}
-                    onClick={onNaviguer}
                     className={`flex min-w-0 items-center gap-2.5 rounded-full px-3 py-2 text-[13px] transition-colors ${
                       actif
                         ? "bg-airzen-accent/20 font-semibold text-airzen-primary"
@@ -174,7 +140,6 @@ function ContenuSidebar({ onNaviguer }: { onNaviguer?: () => void }) {
         <BentoEnergie />
         <Link
           href="/parametres"
-          onClick={onNaviguer}
           className={`flex items-center gap-3 rounded-full px-3.5 py-2.5 text-sm transition-colors ${
             pathname.startsWith("/parametres")
               ? "bg-airzen-accent/25 font-semibold text-airzen-primary"
@@ -208,63 +173,72 @@ function ContenuSidebar({ onNaviguer }: { onNaviguer?: () => void }) {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const [tiroirOuvert, setTiroirOuvert] = useState(false);
+  const pathname = usePathname();
+  const surReglages = pathname.startsWith("/parametres");
 
   return (
     <div className="flex min-h-svh w-full flex-1 bg-airzen-bg">
-      {/* Barre latérale — visible en permanence à partir de md, tiroir avant. */}
+      {/* Barre latérale — ordinateur uniquement (à partir de md). */}
       <aside className="hidden shrink-0 border-r border-airzen-neutral/30 bg-white md:sticky md:top-0 md:flex md:h-svh md:w-[236px]">
         <ContenuSidebar />
       </aside>
 
-      {/* Tiroir mobile */}
-      {tiroirOuvert && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <div
-            className="absolute inset-0 bg-airzen-primary/30"
-            onClick={() => setTiroirOuvert(false)}
-            aria-hidden
-          />
-          <div className="absolute inset-y-0 left-0 flex w-[260px] max-w-[80vw] flex-col bg-white shadow-xl">
-            <div className="flex items-center justify-end p-2">
-              <button
-                type="button"
-                onClick={() => setTiroirOuvert(false)}
-                aria-label="Fermer le menu"
-                className="rounded-full p-2 text-airzen-secondary hover:bg-airzen-bg"
-              >
-                <IconeFermer />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <ContenuSidebar onNaviguer={() => setTiroirOuvert(false)} />
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Barre du haut — mobile uniquement */}
-        <header className="flex items-center justify-between border-b border-airzen-neutral/30 bg-white px-4 py-3 md:hidden">
-          <button
-            type="button"
-            onClick={() => setTiroirOuvert(true)}
-            aria-label="Ouvrir le menu"
-            className="rounded-full p-1.5 text-airzen-primary hover:bg-airzen-bg"
-          >
-            <IconeMenu />
-          </button>
+        {/* Barre du haut — téléphone uniquement : logo + icône Réglages. */}
+        <header className="flex items-center justify-between border-b border-airzen-neutral/30 bg-white px-4 py-2.5 md:hidden">
           <Link href="/" className="flex items-center gap-2">
             <LogoAirZen taille={26} />
             <span className="text-sm font-semibold text-airzen-primary">AIR ZEN Flow</span>
           </Link>
-          <span className="w-8" aria-hidden />
+          <Link
+            href="/parametres"
+            aria-label="Réglages"
+            title="Réglages"
+            className={`rounded-full p-2 transition-colors ${
+              surReglages
+                ? "bg-airzen-accent/25 text-airzen-primary"
+                : "text-airzen-secondary hover:bg-airzen-bg"
+            }`}
+          >
+            <IconeReglagesNav className="h-5 w-5" />
+          </Link>
         </header>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 md:px-11 md:py-9">
+        {/* pb-24 sur téléphone : laisse la place à la barre du bas. */}
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-6 sm:px-6 md:px-11 md:py-9">
           {children}
         </main>
       </div>
+
+      {/* Barre du bas — téléphone uniquement : les 3 écrans, toujours sous le pouce. */}
+      <nav
+        aria-label="Navigation principale"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-airzen-neutral/30 bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
+      >
+        {NAVIGATION.map((lien) => {
+          const actif = estActif(pathname, lien.href);
+          const Icone = lien.icone;
+          return (
+            <Link
+              key={lien.href}
+              href={lien.href}
+              aria-current={actif ? "page" : undefined}
+              className={`flex flex-1 flex-col items-center gap-1 px-1 pb-2 pt-2.5 text-[11px] transition-colors ${
+                actif ? "font-semibold text-airzen-primary" : "font-medium text-airzen-secondary"
+              }`}
+            >
+              <span
+                className={`flex h-7 w-14 items-center justify-center rounded-full ${
+                  actif ? "bg-airzen-accent/30" : ""
+                }`}
+              >
+                <Icone className="h-5 w-5" />
+              </span>
+              {lien.label}
+            </Link>
+          );
+        })}
+      </nav>
       <GestionnaireRappels />
     </div>
   );
