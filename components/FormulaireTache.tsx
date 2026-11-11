@@ -1,11 +1,13 @@
 "use client";
 
 // Formulaire de création / édition de tâche (voir docs/04-design-system.md §3).
-// Pensé pour être rapide : titre + durée + importance + énergie visibles d'emblée,
+// Pensé pour être rapide : titre + durée + énergie + importance visibles d'emblée
+// (côte à côte sur grand écran),
 // le reste replié sous "Plus d'options" pour ne pas intimider.
 import { useState, type FormEvent } from "react";
 import type {
   Jour,
+  Quadrant,
   NiveauEnergie,
   NiveauImportance,
   NiveauPlaisir,
@@ -106,6 +108,14 @@ function Chips<T extends string>({
   );
 }
 
+// Résumé en quelques mots de la case de la matrice, pour l'aperçu en une ligne.
+const RESUME_QUADRANT: Record<Quadrant, string> = {
+  q1: "importante et urgente",
+  q2: "importante, pas urgente",
+  q3: "urgente, pas importante",
+  q4: "ni importante ni urgente",
+};
+
 function Champ({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -164,7 +174,9 @@ export function FormulaireTache({
   const [tags, setTags] = useState((init?.tags ?? []).join(", "));
   const [projetId, setProjetId] = useState(init?.projetId ?? projetIdInitial ?? "");
   const [parenteId, setParenteId] = useState(init?.tacheParenteId ?? "");
-  const [optionsOuvertes, setOptionsOuvertes] = useState(false);
+  // À la création : replié (ajout express). En modification : déplié, pour
+  // retrouver d'un coup tous les réglages de la tâche.
+  const [optionsOuvertes, setOptionsOuvertes] = useState(Boolean(init));
   // Étape 7 — récurrence
   const [frequence, setFrequence] = useState<Frequence>(
     init?.recurrenceRegle?.frequence ?? "aucune",
@@ -234,6 +246,8 @@ export function FormulaireTache({
 
   return (
     <form onSubmit={soumettre} className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm">
+      {/* L'essentiel : un titre et trois critères, côte à côte sur grand écran
+          pour occuper la largeur au lieu d'empiler les champs. */}
       <Champ label="Que voulez-vous faire ?">
         <input
           type="text"
@@ -247,23 +261,8 @@ export function FormulaireTache({
         />
       </Champ>
 
-      {projets.length > 0 && (
-        <Champ label="Projet">
-          <select
-            value={projetId ?? ""}
-            onChange={(e) => setProjetId(e.target.value)}
-            className="w-fit rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
-          >
-            <option value="">Aucun projet</option>
-            {projets.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nom}
-              </option>
-            ))}
-          </select>
-        </Champ>
-      )}
-
+      <div className="grid gap-x-8 gap-y-4 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
+      <div className="md:col-span-2 lg:col-span-1">
       <Champ label="Durée estimée">
         <div className="flex flex-wrap items-center gap-2">
           {uniteDuree === "min" && (
@@ -349,58 +348,31 @@ export function FormulaireTache({
             <option value="jours">jours</option>
           </select>
         </div>
-        <p className="text-xs font-light text-airzen-secondary">Soit {formatDuree(dureeMinutes)}</p>
+        {(uniteDuree !== "min" || dureeMinutes >= 60) && (
+          <p className="text-xs font-light text-airzen-secondary">
+            Soit {formatDuree(dureeMinutes)}
+          </p>
+        )}
       </Champ>
+      </div>
 
+      <Champ label="Énergie demandée">
+        <Chips options={OPTIONS_ENERGIE} valeur={energie} onChange={setEnergie} />
+      </Champ>
       <Champ label="Importance">
         <Chips options={OPTIONS_IMPORTANCE} valeur={importance} onChange={setImportance} />
       </Champ>
-
-      <Champ label="Énergie que la tâche demande">
-        <Chips options={OPTIONS_ENERGIE} valeur={energie} onChange={setEnergie} />
-      </Champ>
-
-      <Champ label="Plaisir que la tâche procure">
-        <Chips options={OPTIONS_PLAISIR} valeur={plaisir} onChange={setPlaisir} />
-      </Champ>
-
-      <Champ label="Échéance (optionnelle)">
-        <input
-          type="date"
-          value={echeance}
-          onChange={(e) => setEcheance(e.target.value)}
-          className="w-fit rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
-        />
-        {echeance && (
-          <label className="mt-1.5 flex items-center gap-2 text-sm text-airzen-secondary">
-            <input
-              type="checkbox"
-              checked={rappel}
-              onChange={(e) => setRappel(e.target.checked)}
-              className="h-4 w-4 accent-airzen-primary"
-            />
-            🔔 Me rappeler à l&apos;échéance (notification, app ouverte)
-          </label>
-        )}
-      </Champ>
-
-      <div className="flex flex-col gap-2.5 rounded-xl border border-airzen-neutral/40 p-3.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-airzen-primary">Priorité proposée</span>
-          <BadgeQuadrant quadrant={apercu.quadrant} />
-        </div>
-        <ul className="flex flex-col gap-0.5 text-xs font-light text-airzen-secondary">
-          <li>{apercu.importance}</li>
-          <li>{apercu.urgence}</li>
-        </ul>
-        <Champ label="Et pour vous, c'est urgent ?">
-          <Chips options={OPTIONS_URGENCE} valeur={urgence} onChange={setUrgence} />
-        </Champ>
-        <ExplicationMatrice
-          seuilJours={seuilJours}
-          libelle="ⓘ Comprendre la matrice d'Eisenhower"
-        />
       </div>
+
+      {/* Priorité proposée, en une ligne (le détail est dans "Plus d'options"). */}
+      <p className="flex flex-wrap items-center gap-2 text-xs text-airzen-secondary">
+        Cette tâche ira en
+        <BadgeQuadrant quadrant={apercu.quadrant} avecLabel={false} />
+        <span>
+          {RESUME_QUADRANT[apercu.quadrant]}
+          {echeance && urgence === "auto" ? " (d'après l'échéance)" : ""}
+        </span>
+      </p>
 
       <button
         type="button"
@@ -411,7 +383,60 @@ export function FormulaireTache({
       </button>
 
       {optionsOuvertes && (
-        <div className="flex flex-col gap-4 border-t border-airzen-neutral/30 pt-4">
+        <div className="grid gap-x-8 gap-y-4 border-t border-airzen-neutral/30 pt-4 md:grid-cols-2">
+        {projets.length > 0 && (
+          <Champ label="Projet">
+            <select
+              value={projetId ?? ""}
+              onChange={(e) => setProjetId(e.target.value)}
+              className="w-fit rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
+            >
+              <option value="">Aucun projet</option>
+              {projets.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nom}
+                </option>
+              ))}
+            </select>
+          </Champ>
+        )}
+
+        <Champ label="Échéance">
+          <input
+            type="date"
+            value={echeance}
+            onChange={(e) => setEcheance(e.target.value)}
+            className="w-fit rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
+          />
+          {echeance && (
+            <label className="mt-1.5 flex items-center gap-2 text-sm text-airzen-secondary">
+              <input
+                type="checkbox"
+                checked={rappel}
+                onChange={(e) => setRappel(e.target.checked)}
+                className="h-4 w-4 accent-airzen-primary"
+              />
+              🔔 Me rappeler à l&apos;échéance (notification, app ouverte)
+            </label>
+          )}
+        </Champ>
+
+          <Champ label="Et pour vous, c'est urgent ?">
+            <Chips options={OPTIONS_URGENCE} valeur={urgence} onChange={setUrgence} />
+            <ul className="flex flex-col gap-0.5 text-xs font-light text-airzen-secondary">
+              <li>{apercu.importance}</li>
+              <li>{apercu.urgence}</li>
+            </ul>
+            <ExplicationMatrice
+              seuilJours={seuilJours}
+              libelle="ⓘ Comprendre la matrice d'Eisenhower"
+            />
+          </Champ>
+        <Champ label="Plaisir que la tâche procure">
+          <Chips options={OPTIONS_PLAISIR} valeur={plaisir} onChange={setPlaisir} />
+        </Champ>
+
+          <div className="md:col-span-2">
           <Champ label="Description">
             <textarea
               value={description}
@@ -422,6 +447,7 @@ export function FormulaireTache({
               className="rounded-lg border border-airzen-neutral/60 px-3 py-2 text-airzen-primary outline-none focus:border-airzen-secondary"
             />
           </Champ>
+          </div>
           <Champ label="Répétition">
             <Chips options={OPTIONS_FREQUENCE} valeur={frequence} onChange={setFrequence} />
             {frequence === "hebdomadaire" && (
