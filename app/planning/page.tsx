@@ -40,7 +40,7 @@ function JourneeProposee() {
   const { utilisateur, profilsEnergie } = useAuth();
   const { taches, chargement, terminer } = useTaches();
   const { projets } = useProjets();
-  const { occupations, connecte } = useOccupations();
+  const { occupations, connecte, erreur: erreurAgenda } = useOccupations();
   const { energieEffective } = useEnergieMoment();
   const [voirQuandMeme, setVoirQuandMeme] = useState(false);
   const maintenant = useHorloge();
@@ -90,6 +90,19 @@ function JourneeProposee() {
                 {plan.minutesDisponibles > 1 ? "s" : ""}
               </p>
             </div>
+          )}
+
+          {erreurAgenda && (
+            <p className="rounded-2xl bg-q1/10 p-4 text-sm text-airzen-primary">
+              Google Agenda est connecté mais ne se synchronise pas : vos rendez-vous ne
+              sont pas pris en compte.{" "}
+              <Link
+                href="/parametres?ouvrir=google"
+                className="font-medium underline underline-offset-2"
+              >
+                Voir pourquoi dans les Réglages
+              </Link>
+            </p>
           )}
 
           {!connecte && (

@@ -4,12 +4,13 @@
 // Présentation en tuiles carrées (icône + label court) : cliquer une tuile
 // déplie son panneau juste en dessous, pour un écran plus compact et moins
 // verbeux — voir demande "moins de texte, plus d'icônes".
-import { Suspense, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/components/AuthProvider";
 import { libelleNiveau } from "@/lib/energie";
+import { messageDiagnostic } from "@/lib/google/diagnostic";
 import { majProfilEnergie, majUtilisateur } from "@/lib/data/profil";
 import { usePreferenceLocale } from "@/lib/hooks/usePreferenceLocale";
 import { CLE_CITATION_VISIBLE } from "@/components/EnTeteAccueil";
@@ -105,14 +106,77 @@ function SectionAccueil() {
 }
 
 // Étape 8 — Connexion Google Agenda (lecture seule).
+// L'écran ne se contente pas de dire "connecté" : il TESTE la lecture de
+// l'agenda et, si elle échoue, explique la cause et quoi faire.
+type EtatSynchro =
+  | { statut: "test" }
+  | { statut: "ok"; nombre: number }
+  | { statut: "erreur"; code: string };
+
+function EncartDiagnostic({ code }: { code: string }) {
+  const { titre, quoiFaire } = messageDiagnostic(code);
+  return (
+    <div className="rounded-lg bg-q1/10 px-3 py-2.5 text-sm text-airzen-primary">
+      <p className="font-medium">{titre}</p>
+      <p className="mt-1 font-light">{quoiFaire}</p>
+    </div>
+  );
+}
+
 function SectionGoogleAgenda() {
   const { user, utilisateur, rafraichir } = useAuth();
   const searchParams = useSearchParams();
   const retour = searchParams.get("google"); // "ok" | "erreur" | null
+  const raison = searchParams.get("raison"); // cause de l'échec, si "erreur"
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
-
   const connecte = utilisateur?.googleCalendarConnecte ?? false;
+  const [synchro, setSynchro] = useState<EtatSynchro | null>(
+    connecte ? { statut: "test" } : null,
+  );
+  // Adresse à déclarer dans Google Cloud (cet écran ne s'affiche que dans le
+  // navigateur, une fois connectée ; le test protège le rendu côté serveur).
+  const adresseRedirection =
+    typeof window === "undefined" ? "" : `${window.location.origin}/api/google/callback`;
+
+  // Lit réellement les créneaux occupés d'aujourd'hui pour vérifier que la
+  // synchronisation fonctionne (même appel que les écrans Maintenant / Planning).
+  const lireSynchro = useCallback(async (): Promise<EtatSynchro> => {
+    if (!user) return { statut: "erreur", code: "inconnue" };
+    try {
+      const debut = new Date();
+      debut.setHours(0, 0, 0, 0);
+      const fin = new Date();
+      fin.setHours(23, 59, 59, 0);
+      const jeton = await user.getIdToken();
+      const reponse = await fetch(
+        `/api/google/occupations?debut=${encodeURIComponent(debut.toISOString())}&fin=${encodeURIComponent(fin.toISOString())}`,
+        { headers: { Authorization: `Bearer ${jeton}` } },
+      );
+      const donnees = await reponse.json().catch(() => null);
+      if (reponse.ok && donnees) return { statut: "ok", nombre: donnees.occupations.length };
+      return { statut: "erreur", code: donnees?.code ?? "inconnue" };
+    } catch {
+      return { statut: "erreur", code: "inconnue" };
+    }
+  }, [user]);
+
+  // Test automatique à l'ouverture de la tuile, si l'agenda est connecté.
+  useEffect(() => {
+    if (!connecte) return;
+    let actif = true;
+    lireSynchro().then((etat) => {
+      if (actif) setSynchro(etat);
+    });
+    return () => {
+      actif = false;
+    };
+  }, [connecte, lireSynchro]);
+
+  async function tester() {
+    setSynchro({ statut: "test" });
+    setSynchro(await lireSynchro());
+  }
 
   async function connecter() {
     if (!user) return;
@@ -145,11 +209,15 @@ function SectionGoogleAgenda() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${jeton}` },
       });
+      setSynchro(null);
       await rafraichir();
     } finally {
       setEnCours(false);
     }
   }
+
+  const classeBouton =
+    "self-start rounded-full border border-airzen-neutral/60 px-4 py-2 text-sm font-medium text-airzen-primary transition-colors hover:bg-airzen-bg disabled:opacity-50";
 
   return (
     <PanneauReglage titre="Google Agenda">
@@ -159,40 +227,87 @@ function SectionGoogleAgenda() {
         d&apos;événement.
       </p>
 
-      {retour === "ok" && (
-        <p className="rounded-lg bg-q2/10 px-3 py-2 text-sm text-q2">
-          Google Agenda connecté ✓
-        </p>
-      )}
-      {retour === "erreur" && (
-        <p className="rounded-lg bg-q1/10 px-3 py-2 text-sm text-q1">
-          La connexion n&apos;a pas abouti. Réessayez.
-        </p>
-      )}
+      {retour === "erreur" && !connecte && <EncartDiagnostic code={raison ?? "inconnue"} />}
       {erreur && <p className="rounded-lg bg-q1/10 px-3 py-2 text-sm text-q1">{erreur}</p>}
 
       {connecte ? (
-        <div className="mt-1 flex items-center gap-3">
-          <span className="text-sm font-medium text-airzen-primary">Connecté ✓</span>
-          <button
-            type="button"
-            onClick={deconnecter}
-            disabled={enCours}
-            className="text-sm text-airzen-neutral hover:text-q1 disabled:opacity-50"
-          >
-            Déconnecter
-          </button>
-        </div>
+        <>
+          {synchro?.statut === "test" && (
+            <p className="text-sm font-light text-airzen-secondary">
+              Vérification de la synchronisation…
+            </p>
+          )}
+          {synchro?.statut === "ok" && (
+            <p className="rounded-lg bg-airzen-bg px-3 py-2 text-sm text-airzen-primary">
+              <span className="font-medium">Synchronisation active ✓</span>{" "}
+              {synchro.nombre === 0
+                ? "Aucun créneau occupé trouvé aujourd'hui dans votre agenda principal."
+                : `${synchro.nombre} créneau${synchro.nombre > 1 ? "x" : ""} occupé${synchro.nombre > 1 ? "s" : ""} trouvé${synchro.nombre > 1 ? "s" : ""} aujourd'hui.`}
+            </p>
+          )}
+          {synchro?.statut === "erreur" && <EncartDiagnostic code={synchro.code} />}
+
+          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+            {synchro?.statut === "erreur" ? (
+              <button type="button" onClick={connecter} disabled={enCours} className={classeBouton}>
+                {enCours ? "Redirection…" : "Reconnecter Google Agenda"}
+              </button>
+            ) : (
+              <span className="text-sm font-medium text-airzen-primary">Connecté ✓</span>
+            )}
+            <button
+              type="button"
+              onClick={tester}
+              disabled={synchro?.statut === "test"}
+              className="text-sm font-medium text-airzen-secondary hover:text-airzen-primary disabled:opacity-50"
+            >
+              Tester à nouveau
+            </button>
+            <button
+              type="button"
+              onClick={deconnecter}
+              disabled={enCours}
+              className="text-sm text-airzen-neutral hover:text-q1 disabled:opacity-50"
+            >
+              Déconnecter
+            </button>
+          </div>
+        </>
       ) : (
-        <button
-          type="button"
-          onClick={connecter}
-          disabled={enCours}
-          className="mt-1 self-start rounded-full border border-airzen-neutral/60 px-4 py-2 text-sm font-medium text-airzen-primary transition-colors hover:bg-airzen-bg disabled:opacity-50"
-        >
+        <button type="button" onClick={connecter} disabled={enCours} className={`mt-1 ${classeBouton}`}>
           {enCours ? "Redirection…" : "Connecter Google Agenda"}
         </button>
       )}
+
+      <details className="mt-1 text-sm text-airzen-secondary">
+        <summary className="cursor-pointer font-medium hover:text-airzen-primary">
+          Aide : les réglages à vérifier dans Google Cloud
+        </summary>
+        <ol className="mt-2 flex list-decimal flex-col gap-1.5 pl-5 font-light">
+          <li>
+            <span className="font-medium">API activée</span> : « API et services » →
+            « Bibliothèque » → « Google Calendar API » doit être sur « Activée ».
+          </li>
+          <li>
+            <span className="font-medium">Adresse de redirection</span> : dans votre client
+            OAuth, la liste « URI de redirection autorisés » doit contenir exactement :
+            <code className="mt-1 block break-all rounded bg-airzen-bg px-2 py-1 text-xs text-airzen-primary">
+              {adresseRedirection}
+            </code>
+          </li>
+          <li>
+            <span className="font-medium">Application « En production »</span> : dans
+            « Écran de consentement OAuth » (ou « Audience »). En mode « Test », seules les
+            adresses ajoutées comme utilisatrices de test peuvent se connecter, et
+            l&apos;autorisation expire au bout de 7 jours.
+          </li>
+          <li>
+            <span className="font-medium">Agenda principal</span> : l&apos;app ne lit que
+            l&apos;agenda principal du compte Google connecté, pas les agendas secondaires
+            ou partagés.
+          </li>
+        </ol>
+      </details>
     </PanneauReglage>
   );
 }
@@ -273,7 +388,13 @@ function SectionNotifications() {
 
 function Reglages() {
   const { user, utilisateur, profilsEnergie, rafraichir } = useAuth();
-  const [tuileOuverte, setTuileOuverte] = useState<IdTuile | null>(null);
+  // Au retour de Google (?google=ok|erreur) ou depuis un lien "Voir pourquoi"
+  // (?ouvrir=google), la tuile Google Agenda s'ouvre toute seule : sinon le
+  // résultat de la connexion resterait caché dans une tuile fermée.
+  const searchParams = useSearchParams();
+  const [tuileOuverte, setTuileOuverte] = useState<IdTuile | null>(
+    searchParams.get("google") || searchParams.get("ouvrir") === "google" ? "google" : null,
+  );
 
   // Copie locale éditable (initialisée depuis le profil déjà chargé par l'auth).
   const [creneaux, setCreneaux] = useState<ProfilEnergie[]>(() =>
