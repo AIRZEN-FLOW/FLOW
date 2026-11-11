@@ -14,7 +14,13 @@ import {
   where,
 } from "firebase/firestore";
 import { getDbClient } from "@/lib/firebase/client";
-import type { SaisieTache, StatutTache, Tache } from "@/lib/types";
+import type {
+  NiveauImportance,
+  Quadrant,
+  SaisieTache,
+  StatutTache,
+  Tache,
+} from "@/lib/types";
 import { calculerQuadrant } from "@/lib/eisenhower";
 
 /** Construit le quadrant à partir d'une saisie + le seuil d'urgence de l'utilisatrice. */
@@ -126,6 +132,24 @@ export async function basculerEpingleTache(id: string, epinglee: boolean): Promi
   const db = getDbClient();
   await updateDoc(doc(db, "taches", id), {
     epinglee,
+    modifieLe: serverTimestamp(),
+  });
+}
+
+/** Déplacement manuel d'une tâche dans une autre case de la matrice (glisser-
+ * déposer) : on enregistre l'importance et l'urgence correspondantes, et on
+ * retire l'épingle (sinon la tâche resterait affichée dans la première case). */
+export async function deplacerTacheVersQuadrant(
+  id: string,
+  quadrant: Quadrant,
+  criteres: { niveauImportance: NiveauImportance; urgenceRessentie: boolean },
+): Promise<void> {
+  const db = getDbClient();
+  await updateDoc(doc(db, "taches", id), {
+    niveauImportance: criteres.niveauImportance,
+    urgenceRessentie: criteres.urgenceRessentie,
+    quadrantEisenhower: quadrant,
+    epinglee: false,
     modifieLe: serverTimestamp(),
   });
 }
