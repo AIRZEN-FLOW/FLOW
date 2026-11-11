@@ -19,7 +19,13 @@ import { calculerQuadrant } from "@/lib/eisenhower";
 
 /** Construit le quadrant à partir d'une saisie + le seuil d'urgence de l'utilisatrice. */
 function quadrantPourSaisie(saisie: SaisieTache, seuilJours: number) {
-  return calculerQuadrant(saisie.dateEcheance ?? null, saisie.niveauImportance, seuilJours);
+  return calculerQuadrant(
+    saisie.dateEcheance ?? null,
+    saisie.niveauImportance,
+    seuilJours,
+    undefined,
+    saisie.urgenceRessentie ?? null,
+  );
 }
 
 export async function creerTache(
@@ -37,10 +43,12 @@ export async function creerTache(
     statut: "a_faire" as StatutTache,
     dateEcheance: saisie.dateEcheance ? Timestamp.fromDate(saisie.dateEcheance) : null,
     niveauImportance: saisie.niveauImportance,
+    urgenceRessentie: saisie.urgenceRessentie ?? null,
     dureeEstimeeMinutes: saisie.dureeEstimeeMinutes,
     niveauEnergieRequis: saisie.niveauEnergieRequis,
     niveauPlaisir: saisie.niveauPlaisir ?? "moyenne",
     quadrantEisenhower: quadrantPourSaisie(saisie, seuilJours),
+    epinglee: false,
     tags: saisie.tags ?? [],
     source: saisie.source ?? "manuelle",
     rappel: saisie.rappel ?? false,
@@ -53,6 +61,9 @@ export async function creerTache(
             : null,
         }
       : null,
+    ordre: Date.now(),
+    tempsPasseMinutes: 0,
+    chronoDemarreLe: null,
     creeLe: serverTimestamp(),
     modifieLe: serverTimestamp(),
   });
@@ -91,6 +102,7 @@ export async function majTache(
     description: saisie.description?.trim() ?? "",
     dateEcheance: saisie.dateEcheance ? Timestamp.fromDate(saisie.dateEcheance) : null,
     niveauImportance: saisie.niveauImportance,
+    urgenceRessentie: saisie.urgenceRessentie ?? null,
     dureeEstimeeMinutes: saisie.dureeEstimeeMinutes,
     niveauEnergieRequis: saisie.niveauEnergieRequis,
     niveauPlaisir: saisie.niveauPlaisir ?? "moyenne",
@@ -108,6 +120,16 @@ export async function supprimerTache(id: string): Promise<void> {
   await deleteDoc(doc(db, "taches", id));
 }
 
+/** Épingle (ou désépingle) une tâche dans la colonne Q1 de la vue Priorités — sans
+ * toucher à son échéance ni à son importance, donc sans recalculer le quadrant. */
+export async function basculerEpingleTache(id: string, epinglee: boolean): Promise<void> {
+  const db = getDbClient();
+  await updateDoc(doc(db, "taches", id), {
+    epinglee,
+    modifieLe: serverTimestamp(),
+  });
+}
+
 /** Rattache (ou détache, si null) une tâche existante à un projet — sans toucher au reste. */
 export async function assignerProjetTache(
   id: string,
@@ -117,5 +139,32 @@ export async function assignerProjetTache(
   await updateDoc(doc(db, "taches", id), {
     projetId,
     modifieLe: serverTimestamp(),
+  });
+}
+
+/** Réordonne des tâches (glisser-déposer dans le Gantt) : `ordre` croissant selon la liste fournie. */
+export async function reordonnerTaches(idsEnOrdre: string[]): Promise<void> {
+  const db = getDbClient();
+  await Promise.all(
+    idsEnOrdre.map((id, index) => updateDoc(doc(db, "taches", id), { ordre: index })),
+  );
+}
+
+/** Démarre (ou reprend) le chronomètre d'une tâche. */
+export async function demarrerChrono(id: string): Promise<void> {
+  const db = getDbClient();
+  await updateDoc(doc(db, "taches", id), { chronoDemarreLe: serverTimestamp() });
+}
+
+/**
+ * Met le chronomètre en pause : ajoute au cumul le temps écoulé depuis le
+ * démarrage (calculé côté client à partir de `chronoDemarreLe`) et efface le
+ * marqueur de démarrage.
+ */
+export async function mettreEnPauseChrono(id: string, tempsPasseMinutes: number): Promise<void> {
+  const db = getDbClient();
+  await updateDoc(doc(db, "taches", id), {
+    tempsPasseMinutes,
+    chronoDemarreLe: null,
   });
 }

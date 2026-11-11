@@ -10,7 +10,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { RequireAuth } from "@/components/RequireAuth";
-import { AppShell } from "@/components/AppShell";
+import { AppShell, LIEN_BETA_TESTEUR } from "@/components/AppShell";
 import { useAuth } from "@/components/AuthProvider";
 import { MessageFinJournee } from "@/components/MessageFinJournee";
 import { EnTeteAccueil } from "@/components/EnTeteAccueil";
@@ -27,7 +27,7 @@ import {
   useOccupations,
 } from "@/lib/hooks/useOccupations";
 import { calculerSuggestions, type TempsDisponible } from "@/lib/matching";
-import { estUrgente, QUADRANTS } from "@/lib/eisenhower";
+import { QUADRANTS, urgenceEffective } from "@/lib/eisenhower";
 import { formatDuree, tsEnDate } from "@/lib/format";
 import type { Quadrant, SaisieTache, Tache } from "@/lib/types";
 
@@ -99,19 +99,19 @@ function EcranMaintenant() {
   }, [taches, maintenant]);
 
   // Charge du jour : mêmes chiffres que sur Planning, condensés en une ligne.
-  const plan = usePlanJournee(
-    taches,
-    profilsEnergie,
-    occupations,
-    energieEffective,
-    utilisateur?.finJournee,
-  );
+  const plan = usePlanJournee(taches, profilsEnergie, occupations, energieEffective, {
+    finJournee: utilisateur?.finJournee,
+    heureDebutTravail: utilisateur?.heureDebutTravail,
+    pauseDejeunerActive: utilisateur?.pauseDejeunerActive,
+    heureDebutDejeuner: utilisateur?.heureDebutDejeuner,
+    heureFinDejeuner: utilisateur?.heureFinDejeuner,
+  });
   const tachesUrgentes = useMemo(() => {
     const seuilJours = utilisateur?.seuilUrgenceJours ?? 3;
     return taches.filter(
       (t) =>
         (t.statut === "a_faire" || t.statut === "en_cours") &&
-        estUrgente(tsEnDate(t.dateEcheance), seuilJours, maintenant),
+        urgenceEffective(tsEnDate(t.dateEcheance), t.urgenceRessentie, seuilJours, maintenant),
     ).length;
   }, [taches, utilisateur?.seuilUrgenceJours, maintenant]);
 
@@ -400,6 +400,10 @@ function EcranMaintenant() {
         <Link href="/bilan" className="hover:text-airzen-primary">
           Mon bilan →
         </Link>
+        {/* Sur téléphone, la barre latérale (où vit ce lien) n'existe pas. */}
+        <a href={LIEN_BETA_TESTEUR} className="hover:text-airzen-primary md:hidden">
+          Commentaire bêta testeur →
+        </a>
       </nav>
     </div>
   );
