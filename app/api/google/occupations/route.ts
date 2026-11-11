@@ -1,7 +1,7 @@
 // Étape 8 — Renvoie les créneaux OCCUPÉS du calendrier entre deux instants.
 // LECTURE SEULE (freeBusy). Le refresh token n'est lu que côté serveur.
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
-import { getOccupations, rafraichirJeton } from "@/lib/google/calendar";
+import { ErreurGoogle, getOccupations, rafraichirJeton } from "@/lib/google/calendar";
 
 export async function GET(request: Request) {
   const enTete = request.headers.get("authorization") ?? "";
@@ -28,7 +28,10 @@ export async function GET(request: Request) {
   const snap = await getAdminDb().collection("secretsGoogle").doc(uid).get();
   const refreshToken = snap.exists ? (snap.data()?.googleRefreshToken as string) : null;
   if (!refreshToken) {
-    return Response.json({ erreur: "Google Agenda non connecté." }, { status: 409 });
+    return Response.json(
+      { erreur: "Google Agenda non connecté.", code: "non_connecte" },
+      { status: 409 },
+    );
   }
 
   try {
@@ -37,8 +40,12 @@ export async function GET(request: Request) {
     return Response.json({ occupations });
   } catch (e) {
     console.error("Erreur lecture agenda :", e);
+    // Le code permet à l'écran d'expliquer la cause (lib/google/diagnostic.ts).
     return Response.json(
-      { erreur: "Lecture de l'agenda impossible pour le moment." },
+      {
+        erreur: "Lecture de l'agenda impossible pour le moment.",
+        code: e instanceof ErreurGoogle ? e.code : "inconnue",
+      },
       { status: 502 },
     );
   }

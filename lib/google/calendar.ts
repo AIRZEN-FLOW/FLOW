@@ -40,6 +40,67 @@ export function urlConsentement(redirectUri: string, state: string): string {
   return `${URL_AUTORISATION}?${params}`;
 }
 
+/**
+ * Causes de panne reconnues, traduites en message clair côté écran
+ * (voir lib/google/diagnostic.ts) :
+ *   autorisation_expiree : le refresh token est refusé (révoqué, ou expiré au
+ *                          bout de 7 jours quand l'écran de consentement Google
+ *                          est resté en mode "Test")
+ *   api_desactivee       : l'API Google Calendar n'est pas activée dans le
+ *                          projet Google Cloud
+ *   configuration        : identifiant / secret client refusés, ou adresse de
+ *                          redirection non déclarée
+ *   inconnue             : tout le reste (panne passagère, réseau…)
+ */
+export type CodeErreurGoogle =
+  | "autorisation_expiree"
+  | "api_desactivee"
+  | "configuration"
+  | "inconnue";
+
+export class ErreurGoogle extends Error {
+  code: CodeErreurGoogle;
+
+  constructor(code: CodeErreurGoogle, etape: string, status: number, detail: string) {
+    super(`Google — ${etape} refusé (${status}) : ${detail}`);
+    this.code = code;
+  }
+}
+
+/** Lit la réponse d'erreur de Google et en déduit la cause la plus probable. */
+async function erreurDepuisReponse(etape: string, reponse: Response): Promise<ErreurGoogle> {
+  let detail = "";
+  let raison = "";
+  try {
+    const corps = await reponse.json();
+    if (typeof corps?.error === "string") {
+      // Format du serveur de jetons : { error, error_description }
+      raison = corps.error;
+      detail = [corps.error, corps.error_description].filter(Boolean).join(" — ");
+    } else if (corps?.error) {
+      // Format des API Google : { error: { status, message, errors: [{ reason }] } }
+      raison = corps.error.errors?.[0]?.reason ?? corps.error.status ?? "";
+      detail = [raison, corps.error.message].filter(Boolean).join(" — ");
+    }
+  } catch {
+    detail = "réponse illisible";
+  }
+
+  let code: CodeErreurGoogle = "inconnue";
+  if (raison === "invalid_grant") code = "autorisation_expiree";
+  else if (
+    raison === "invalid_client" ||
+    raison === "unauthorized_client" ||
+    raison === "redirect_uri_mismatch"
+  )
+    code = "configuration";
+  else if (raison === "accessNotConfigured" || /has not been used|is disabled/i.test(detail))
+    code = "api_desactivee";
+  else if (reponse.status === 401) code = "autorisation_expiree";
+
+  return new ErreurGoogle(code, etape, reponse.status, detail || "sans détail");
+}
+
 interface ReponseJeton {
   access_token: string;
   refresh_token?: string;
@@ -63,7 +124,7 @@ export async function echangerCode(
     }),
   });
   if (!reponse.ok) {
-    throw new Error(`Échange de code Google refusé (${reponse.status})`);
+    throw await erreurDepuisReponse("échange du code", reponse);
   }
   return reponse.json();
 }
@@ -81,7 +142,7 @@ export async function rafraichirJeton(refreshToken: string): Promise<string> {
     }),
   });
   if (!reponse.ok) {
-    throw new Error(`Rafraîchissement du jeton Google refusé (${reponse.status})`);
+    throw await erreurDepuisReponse("renouvellement de l'accès", reponse);
   }
   const donnees: ReponseJeton = await reponse.json();
   return donnees.access_token;
@@ -114,7 +175,7 @@ export async function getOccupations(
     }),
   });
   if (!reponse.ok) {
-    throw new Error(`Lecture freeBusy refusée (${reponse.status})`);
+    throw await erreurDepuisReponse("lecture de l'agenda", reponse);
   }
   const donnees = await reponse.json();
   const busy: { start: string; end: string }[] =

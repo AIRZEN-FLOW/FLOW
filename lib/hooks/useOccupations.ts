@@ -14,6 +14,9 @@ export function useOccupations(date: Date = new Date()) {
   const { user, utilisateur } = useAuth();
   const [occupations, setOccupations] = useState<Occupation[] | null>(null);
   const [chargement, setChargement] = useState(false);
+  // Code de la panne si l'agenda est connecté mais illisible (voir
+  // lib/google/diagnostic.ts) ; null quand tout va bien.
+  const [erreur, setErreur] = useState<string | null>(null);
 
   const connecte = utilisateur?.googleCalendarConnecte ?? false;
   const cleJour = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
@@ -33,8 +36,9 @@ export function useOccupations(date: Date = new Date()) {
           { headers: { Authorization: `Bearer ${jeton}` } },
         );
         if (!actif) return;
-        if (reponse.ok) {
-          const donnees = await reponse.json();
+        const donnees = await reponse.json().catch(() => null);
+        if (reponse.ok && donnees) {
+          setErreur(null);
           setOccupations(
             (donnees.occupations as { debut: string; fin: string }[]).map((o) => ({
               debut: new Date(o.debut),
@@ -43,9 +47,13 @@ export function useOccupations(date: Date = new Date()) {
           );
         } else {
           setOccupations(null);
+          setErreur(donnees?.code ?? "inconnue");
         }
       } catch {
-        if (actif) setOccupations(null);
+        if (actif) {
+          setOccupations(null);
+          setErreur("inconnue");
+        }
       } finally {
         if (actif) setChargement(false);
       }
@@ -55,7 +63,7 @@ export function useOccupations(date: Date = new Date()) {
     };
   }, [user, connecte, cleJour]);
 
-  return { occupations, chargement, connecte };
+  return { occupations, chargement, connecte, erreur: connecte ? erreur : null };
 }
 
 /** Minutes disponibles entre `maintenant` et le prochain créneau occupé (null = journée libre). */
