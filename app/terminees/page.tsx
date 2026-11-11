@@ -9,6 +9,7 @@ import Link from "next/link";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell } from "@/components/AppShell";
 import { CarteTache } from "@/components/CarteTache";
+import { OngletsTaches } from "@/components/OngletsTaches";
 import { FormulaireTache } from "@/components/FormulaireTache";
 import { useTaches } from "@/lib/hooks/useTaches";
 import { useProjets } from "@/lib/hooks/useProjets";
@@ -43,6 +44,12 @@ function PageContenu() {
       });
   }, [taches, filtreProjet]);
 
+  // Total affiché dans l'onglet, indépendant du filtre par projet.
+  const nombreTerminees = useMemo(
+    () => taches.filter((t) => t.statut === "terminee").length,
+    [taches],
+  );
+
   async function enregistrerModification(saisie: SaisieTache) {
     if (!tacheEnEdition) return;
     setEnregistrement(true);
@@ -56,12 +63,13 @@ function PageContenu() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-bold text-airzen-primary">Tâches terminées</h1>
-        <p className="mt-1 text-sm font-light text-airzen-secondary">
-          Tout ce que vous avez accompli, au même endroit.
-        </p>
-      </div>
+      <h1 className="text-2xl font-bold text-airzen-primary">Mes tâches</h1>
+
+      <OngletsTaches actif="terminees" nombreTerminees={nombreTerminees} />
+
+      <p className="text-sm font-light text-airzen-secondary">
+        Tout ce que vous avez accompli, au même endroit.
+      </p>
 
       {projets.length > 0 && (
         <label className="flex items-center gap-2 self-start text-sm text-airzen-secondary">

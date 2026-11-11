@@ -135,6 +135,9 @@ export function expliquerQuadrant(
 
 /**
  * Libellés et couleurs des quadrants (charte docs/04-design-system.md).
+ * Le libellé court reprend les initiales des deux critères de la matrice :
+ * I = Important, U = Urgent ; majuscule = oui, minuscule = non
+ * (IU = important et urgent, Iu = important pas urgent, etc.).
  * Choisies exclusivement parmi les couleurs de la charte AIR ZEN, chacune
  * associée à ce qu'elle signifie pour la décision :
  *   Q1 urgent + important        → corail  (alerte douce, sans être alarmante)
@@ -147,8 +150,28 @@ export const QUADRANTS: Record<
   Quadrant,
   { label: string; court: string; couleur: string }
 > = {
-  q1: { label: "Faire maintenant", court: "P1", couleur: "#C97064" },
-  q2: { label: "Planifier", court: "P2", couleur: "#EDC426" },
-  q3: { label: "Déléguer ou minimiser", court: "P3", couleur: "#76939D" },
-  q4: { label: "Éliminer ou différer", court: "P4", couleur: "#B3BEC4" },
+  q1: { label: "Faire maintenant", court: "IU", couleur: "#C97064" },
+  q2: { label: "Planifier", court: "Iu", couleur: "#EDC426" },
+  q3: { label: "Déléguer ou minimiser", court: "iU", couleur: "#76939D" },
+  q4: { label: "Éliminer ou différer", court: "iu", couleur: "#B3BEC4" },
 };
+
+/**
+ * Importance et urgence à enregistrer quand l'utilisatrice déplace elle-même
+ * une tâche dans une case de la matrice (glisser-déposer). On ne touche à
+ * l'importance que si c'est nécessaire : une tâche "basse" glissée vers une
+ * case non importante reste "basse".
+ */
+export function criteresPourQuadrant(
+  quadrant: Quadrant,
+  importanceActuelle: NiveauImportance,
+): { niveauImportance: NiveauImportance; urgenceRessentie: boolean } {
+  const important = quadrant === "q1" || quadrant === "q2";
+  const urgent = quadrant === "q1" || quadrant === "q3";
+  const niveauImportance: NiveauImportance = important
+    ? "haute"
+    : importanceActuelle === "haute"
+      ? "moyenne"
+      : importanceActuelle;
+  return { niveauImportance, urgenceRessentie: urgent };
+}

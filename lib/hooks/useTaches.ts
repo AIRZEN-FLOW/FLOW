@@ -6,11 +6,12 @@ import { useCallback, useEffect, useState } from "react";
 import { Timestamp } from "firebase/firestore";
 import { useAuth } from "@/components/AuthProvider";
 import { useCelebration } from "@/components/CelebrationProvider";
-import type { SaisieTache, StatutTache, Tache } from "@/lib/types";
+import type { Quadrant, SaisieTache, StatutTache, Tache } from "@/lib/types";
 import {
   assignerProjetTache,
   basculerEpingleTache,
   creerTache,
+  deplacerTacheVersQuadrant,
   demarrerChrono as demarrerChronoDb,
   getTaches,
   majStatutTache,
@@ -19,7 +20,7 @@ import {
   reordonnerTaches as reordonnerTachesDb,
   supprimerTache,
 } from "@/lib/data/taches";
-import { calculerQuadrant } from "@/lib/eisenhower";
+import { calculerQuadrant, criteresPourQuadrant } from "@/lib/eisenhower";
 import { tsEnDate } from "@/lib/format";
 import { occurrenceSuivante } from "@/lib/recurrence";
 
@@ -202,6 +203,30 @@ export function useTaches() {
     [taches],
   );
 
+  // Déplacement manuel dans la matrice (glisser-déposer d'une case à l'autre).
+  // Affichage mis à jour tout de suite, puis enregistrement ; en cas d'échec,
+  // on recharge pour revenir à l'état réel de la base.
+  const deplacerVersQuadrant = useCallback(
+    async (id: string, quadrant: Quadrant) => {
+      const tache = taches.find((t) => t.id === id);
+      if (!tache) return;
+      const criteres = criteresPourQuadrant(quadrant, tache.niveauImportance);
+      setTaches((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? { ...t, ...criteres, quadrantEisenhower: quadrant, epinglee: false }
+            : t,
+        ),
+      );
+      try {
+        await deplacerTacheVersQuadrant(id, quadrant, criteres);
+      } catch {
+        await recharger();
+      }
+    },
+    [taches, recharger],
+  );
+
   // Rattache d'un coup plusieurs tâches déjà existantes à un projet
   // (ex : tâches créées avant que le projet n'existe).
   const rattacherAuProjet = useCallback(
@@ -269,6 +294,7 @@ export function useTaches() {
     supprimer,
     rattacherAuProjet,
     basculerEpingle,
+    deplacerVersQuadrant,
     demarrerChrono,
     mettreEnPauseChrono,
     reordonnerTaches,

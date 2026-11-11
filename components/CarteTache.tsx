@@ -74,12 +74,12 @@ function IndicateurPlaisir({ tache }: { tache: Tache }) {
   return null;
 }
 
-// Petit repère quand une tâche est épinglée dans Priorité 1 alors que son
+// Petit repère quand une tâche est épinglée dans la case IU alors que son
 // quadrant réel (calculé) est différent — pour ne pas induire en erreur.
 function IndicateurEpingle({ tache }: { tache: Tache }) {
   if (!tache.epinglee) return null;
   return (
-    <span title="Épinglée dans Priorité 1" className="inline-flex text-airzen-accent">
+    <span title="Épinglée dans IU (important et urgent)" className="inline-flex text-airzen-accent">
       <IconePunaise className="h-3 w-3" />
     </span>
   );
@@ -140,11 +140,11 @@ export function CarteTache({
         <button
           type="button"
           onClick={() => onEpingler(tache)}
-          aria-label={tache.epinglee ? "Désépingler" : "Épingler dans Priorité 1"}
+          aria-label={tache.epinglee ? "Désépingler" : "Épingler dans IU"}
           title={
             tache.epinglee
               ? "Désépingler"
-              : "Épingler dans Priorité 1 — la garder sous les yeux"
+              : "Épingler dans IU — la garder sous les yeux"
           }
           className={`${CLASSE_BOUTON_ICONE} ${
             tache.epinglee ? "text-airzen-accent" : "text-airzen-secondary"
@@ -222,21 +222,22 @@ export function CarteTache({
   if (tuile) {
     return (
       <article
-        className={`flex aspect-square flex-col rounded-2xl bg-white p-3 shadow-sm transition-opacity ${
+        className={`flex flex-col rounded-2xl bg-white p-3 shadow-sm transition-opacity ${
           attenue || terminee ? "opacity-60" : ""
         }`}
         style={{ borderLeft: `4px solid ${couleurQuadrant}` }}
       >
-        <div className="min-w-0 flex-1 overflow-hidden">
+        {/* Hauteur libre : la tuile prend la place de son texte, pas plus. */}
+        <div className="min-w-0">
           {elementProjet("mb-0.5 text-[10px]")}
           {sousTacheDe && (
             <p className="mb-0.5 truncate text-[10px] font-light text-airzen-neutral">
               ↳ {sousTacheDe}
             </p>
           )}
-          {elementTitre("block line-clamp-2 text-xs leading-snug")}
+          {elementTitre("block line-clamp-3 text-xs leading-snug")}
           {tache.description && (
-            <p className="mt-0.5 line-clamp-1 text-[10px] font-light text-airzen-neutral">
+            <p className="mt-0.5 line-clamp-3 whitespace-pre-line text-[11px] font-light leading-snug text-airzen-secondary">
               {tache.description}
             </p>
           )}
