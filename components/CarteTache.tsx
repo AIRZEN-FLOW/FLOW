@@ -19,10 +19,8 @@ import {
 } from "@/lib/format";
 import {
   IconeCalendrier,
-  IconeCloche,
   IconeCoche,
   IconeCorbeille,
-  IconeCrayon,
   IconeEclair,
   IconeHorloge,
   IconePunaise,
@@ -53,26 +51,6 @@ interface CarteTacheProps {
 
 const CLASSE_BOUTON_ICONE =
   "rounded-full p-1.5 transition-colors hover:bg-airzen-bg shrink-0";
-
-// Indicateur de plaisir, affiché seulement aux extrêmes (corvée / plaisir) —
-// le niveau "moyenne" est le cas neutre par défaut, pas besoin de le signaler.
-function IndicateurPlaisir({ tache }: { tache: Tache }) {
-  if (tache.niveauPlaisir === "basse") {
-    return (
-      <span title="Plutôt une corvée" className="text-airzen-neutral">
-        💪
-      </span>
-    );
-  }
-  if (tache.niveauPlaisir === "haute") {
-    return (
-      <span title="Plutôt un plaisir" className="text-airzen-neutral">
-        😊
-      </span>
-    );
-  }
-  return null;
-}
 
 // Petit repère quand une tâche est épinglée dans la case IU alors que son
 // quadrant réel (calculé) est différent — pour ne pas induire en erreur.
@@ -153,17 +131,6 @@ export function CarteTache({
           <IconePunaise />
         </button>
       )}
-      {onModifier && (
-        <button
-          type="button"
-          onClick={() => onModifier(tache)}
-          aria-label="Modifier"
-          title="Modifier"
-          className={`${CLASSE_BOUTON_ICONE} text-airzen-secondary`}
-        >
-          <IconeCrayon />
-        </button>
-      )}
       {!terminee && onTerminer && (
         <button
           type="button"
@@ -186,19 +153,22 @@ export function CarteTache({
           <IconeRouvrir />
         </button>
       )}
-      {onSupprimer && (
-        <button
-          type="button"
-          onClick={() => onSupprimer(tache)}
-          aria-label="Supprimer"
-          title="Supprimer"
-          className={`${CLASSE_BOUTON_ICONE} text-airzen-neutral hover:bg-q1/10 hover:text-q1`}
-        >
-          <IconeCorbeille />
-        </button>
-      )}
     </>
   );
+
+  // La corbeille vit à part, dans le coin en haut à droite de la carte : loin de
+  // "Terminer", pour ne pas supprimer une tâche par un clic à côté.
+  const corbeille = onSupprimer ? (
+    <button
+      type="button"
+      onClick={() => onSupprimer(tache)}
+      aria-label="Supprimer"
+      title="Supprimer"
+      className="shrink-0 rounded-full p-1 text-airzen-neutral transition-colors hover:bg-q1/10 hover:text-q1"
+    >
+      <IconeCorbeille className="h-3.5 w-3.5" />
+    </button>
+  ) : null;
 
   // Nom du projet affiché AVANT le titre de la tâche (repère de contexte immédiat),
   // conformément au besoin exprimé : "1 - le nom du projet, 2 - la tâche".
@@ -222,13 +192,15 @@ export function CarteTache({
   if (tuile) {
     return (
       <article
-        className={`flex flex-col rounded-2xl bg-white p-3 shadow-sm transition-opacity ${
+        className={`relative flex flex-col rounded-2xl bg-white p-3 shadow-sm transition-opacity ${
           attenue || terminee ? "opacity-60" : ""
         }`}
         style={{ borderLeft: `4px solid ${couleurQuadrant}` }}
       >
-        {/* Hauteur libre : la tuile prend la place de son texte, pas plus. */}
-        <div className="min-w-0">
+        {corbeille && <div className="absolute right-1.5 top-1.5">{corbeille}</div>}
+        {/* Hauteur libre : la tuile prend la place de son texte, pas plus.
+            pr-5 : le texte ne passe pas sous la corbeille. */}
+        <div className={`min-w-0 ${corbeille ? "pr-5" : ""}`}>
           {elementProjet("mb-0.5 text-[10px]")}
           {sousTacheDe && (
             <p className="mb-0.5 truncate text-[10px] font-light text-airzen-neutral">
@@ -244,20 +216,10 @@ export function CarteTache({
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <BadgeQuadrant quadrant={tache.quadrantEisenhower} avecLabel={false} />
             <IndicateurEpingle tache={tache} />
-            {tache.recurrenceRegle && (
-              <span title="Tâche récurrente" className="text-xs text-airzen-neutral">
-                ↻
-              </span>
-            )}
-            {tache.rappel && (
-              <span title="Rappel activé" className="text-airzen-neutral">
-                <IconeCloche className="h-3 w-3" />
-              </span>
-            )}
-            <IndicateurPlaisir tache={tache} />
           </div>
           <p className="mt-1 text-[11px] text-airzen-secondary">
             {formatDuree(tache.dureeEstimeeMinutes)}
+            {` · énergie ${libelleNiveau(tache.niveauEnergieRequis).toLowerCase()}`}
             {echeance ? ` · ${echeance}` : ""}
           </p>
         </div>
@@ -310,13 +272,6 @@ export function CarteTache({
                 {formatEcheanceCourt(tsEnDate(tache.dateEcheance))}
               </span>
             )}
-            {tache.recurrenceRegle && <span title="Tâche récurrente">↻</span>}
-            {tache.rappel && (
-              <span title="Rappel activé" className="inline-flex text-airzen-neutral">
-                <IconeCloche className="h-3 w-3" />
-              </span>
-            )}
-            <IndicateurPlaisir tache={tache} />
           </div>
         ) : (
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-airzen-secondary">
@@ -325,21 +280,21 @@ export function CarteTache({
             <span>{formatDuree(tache.dureeEstimeeMinutes)}</span>
             <span title="Énergie requise">{libelleNiveau(tache.niveauEnergieRequis).toLowerCase()}</span>
             {echeance && <span>{echeance}</span>}
-            {tache.recurrenceRegle && <span title="Tâche récurrente">↻</span>}
-            {tache.rappel && (
-              <span title="Rappel activé" className="inline-flex text-airzen-neutral">
-                <IconeCloche className="h-3 w-3" />
-              </span>
-            )}
-            <IndicateurPlaisir tache={tache} />
           </div>
         )}
         {raison && <p className="mt-1 text-xs font-light text-airzen-secondary">{raison}</p>}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
-        {chrono}
-        <div className="flex items-center gap-0.5">{actions}</div>
+      <div
+        className={`flex shrink-0 flex-col items-end gap-0.5 self-stretch ${
+          corbeille ? "justify-between" : "justify-center"
+        }`}
+      >
+        {corbeille && <div className="-mt-1">{corbeille}</div>}
+        <div className="flex items-center gap-1">
+          {chrono}
+          <div className="flex items-center gap-0.5">{actions}</div>
+        </div>
       </div>
     </article>
   );
