@@ -1,6 +1,6 @@
 "use client";
 
-// Sélecteur "Liste / Tuiles" — deux boutons compacts, sans jargon.
+// Sélecteur "Matrice / Tuiles" — deux boutons compacts, sans jargon.
 import type { ModeAffichage } from "@/lib/hooks/useModeAffichage";
 
 export function SelecteurAffichage({
@@ -11,9 +11,8 @@ export function SelecteurAffichage({
   onChange: (m: ModeAffichage) => void;
 }) {
   const options: { valeur: ModeAffichage; label: string }[] = [
-    { valeur: "liste", label: "Liste" },
-    { valeur: "tuile", label: "Tuiles" },
     { valeur: "priorites", label: "Matrice" },
+    { valeur: "tuile", label: "Tuiles" },
   ];
   return (
     <div className="inline-flex items-center gap-1 rounded-full bg-white p-1 shadow-sm">

@@ -17,11 +17,19 @@ import { useAuth } from "@/components/AuthProvider";
 import { useTaches } from "@/lib/hooks/useTaches";
 import { useProjets } from "@/lib/hooks/useProjets";
 import { useModeAffichage } from "@/lib/hooks/useModeAffichage";
-import type { Quadrant, SaisieTache, Tache } from "@/lib/types";
+import type { NiveauEnergie, Quadrant, SaisieTache, Tache } from "@/lib/types";
 
 // items-start : chaque tuile garde la hauteur de son propre texte, au lieu de
 // s'étirer à la hauteur de la plus grande de sa rangée.
 const CLASSES_GRILLE_TUILES = "grid grid-cols-2 items-start gap-3 sm:grid-cols-3 lg:grid-cols-4";
+
+// Mode tuiles : les tâches sont rangées par énergie demandée, pour choisir
+// selon sa forme du moment (la matrice, elle, range par priorité).
+const GROUPES_ENERGIE: { niveau: NiveauEnergie; titre: string }[] = [
+  { niveau: "haute", titre: "Énergie haute" },
+  { niveau: "moyenne", titre: "Énergie moyenne" },
+  { niveau: "basse", titre: "Énergie basse" },
+];
 
 function GestionTaches() {
   const { utilisateur } = useAuth();
@@ -62,7 +70,7 @@ function GestionTaches() {
   // ?mode=priorites ouvre directement la vue matrice, une seule fois au chargement.
   const modeParam = searchParams.get("mode");
   useEffect(() => {
-    if (modeParam === "liste" || modeParam === "tuile" || modeParam === "priorites") {
+    if (modeParam === "tuile" || modeParam === "priorites") {
       setMode(modeParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,6 +183,11 @@ function GestionTaches() {
     return groupes;
   }, [topLevel]);
 
+  const tuiles = useMemo(
+    () => topLevel.flatMap((t) => [t, ...enfantsDe(t.id)]),
+    [topLevel, enfantsDe],
+  );
+
   const aucune = !chargement && topLevel.length === 0 && terminees.length === 0;
 
   return (
@@ -263,77 +276,45 @@ function GestionTaches() {
             Aucune tâche ici. Ajoutez-en une pour commencer 🌱
           </p>
         </div>
-      ) : mode === "liste" ? (
-        <div className="flex flex-col gap-3">
-          {topLevel.map((t) => {
-            const enfants = enfantsDe(t.id);
+      ) : topLevel.length === 0 ? (
+        <p className="text-sm font-light text-airzen-secondary">Tout est fait ici, bravo ✨</p>
+      ) : mode === "tuile" ? (
+        // Mode tuiles : un groupe par niveau d'énergie. La hiérarchie est
+        // aplatie (une sous-tâche affiche le titre de sa mère au lieu d'une
+        // indentation, impossible à rendre en grille).
+        <div className="flex flex-col gap-5">
+          {GROUPES_ENERGIE.map(({ niveau, titre }) => {
+            const liste = tuiles.filter((t) => t.niveauEnergieRequis === niveau);
+            if (liste.length === 0) return null;
             return (
-              <div key={t.id} className="flex flex-col gap-2">
-                <CarteTache
-                  tache={t}
-                  projet={projetDe(t)}
-                  onModifier={ouvrirEdition}
-                  onTerminer={(t) => terminer(t.id)}
-                  onSupprimer={(t) => supprimer(t.id)}
-                  onEpingler={(t) => basculerEpingle(t.id)}
-                  onDemarrerChrono={(t) => demarrerChrono(t.id)}
-                  onMettreEnPauseChrono={(t) => mettreEnPauseChrono(t.id)}
-                />
-                {enfants.length > 0 && (
-                  <div className="ml-4 flex flex-col gap-2 border-l-2 border-airzen-neutral/30 pl-4">
-                    {enfants.map((s) => (
-                      <CarteTache
-                        key={s.id}
-                        tache={s}
-                        projet={projetDe(s)}
-                        onModifier={ouvrirEdition}
-                        onTerminer={(s) => terminer(s.id)}
-                        onSupprimer={(s) => supprimer(s.id)}
-                        onEpingler={(s) => basculerEpingle(s.id)}
-                        onDemarrerChrono={(s) => demarrerChrono(s.id)}
-                        onMettreEnPauseChrono={(s) => mettreEnPauseChrono(s.id)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+              <section key={niveau} className="flex flex-col gap-2.5">
+                <h2 className="text-xs font-bold uppercase tracking-wide text-airzen-secondary">
+                  {titre}{" "}
+                  <span className="font-medium text-airzen-neutral">· {liste.length}</span>
+                </h2>
+                <div className={CLASSES_GRILLE_TUILES}>
+                  {liste.map((t) => (
+                    <CarteTache
+                      key={t.id}
+                      tache={t}
+                      mode="tuile"
+                      projet={projetDe(t)}
+                      sousTacheDe={
+                        t.tacheParenteId ? titreParId.get(t.tacheParenteId) : undefined
+                      }
+                      onModifier={ouvrirEdition}
+                      onTerminer={(t) => terminer(t.id)}
+                      onSupprimer={(t) => supprimer(t.id)}
+                      onEpingler={(t) => basculerEpingle(t.id)}
+                      onDemarrerChrono={(t) => demarrerChrono(t.id)}
+                      onMettreEnPauseChrono={(t) => mettreEnPauseChrono(t.id)}
+                    />
+                  ))}
+                </div>
+              </section>
             );
           })}
-          {topLevel.length === 0 && terminees.length > 0 && (
-            <p className="text-sm font-light text-airzen-secondary">
-              Tout est fait ici, bravo ✨
-            </p>
-          )}
         </div>
-      ) : mode === "tuile" ? (
-        // Mode tuiles : hiérarchie aplatie (une sous-tâche affiche le titre
-        // de sa mère au lieu d'une indentation, impossible à rendre en grille).
-        <>
-          <div className={CLASSES_GRILLE_TUILES}>
-            {topLevel.flatMap((t) => [t, ...enfantsDe(t.id)]).map((t) => (
-              <CarteTache
-                key={t.id}
-                tache={t}
-                mode="tuile"
-                projet={projetDe(t)}
-                sousTacheDe={
-                  t.tacheParenteId ? titreParId.get(t.tacheParenteId) : undefined
-                }
-                onModifier={ouvrirEdition}
-                onTerminer={(t) => terminer(t.id)}
-                onSupprimer={(t) => supprimer(t.id)}
-                onEpingler={(t) => basculerEpingle(t.id)}
-                onDemarrerChrono={(t) => demarrerChrono(t.id)}
-                onMettreEnPauseChrono={(t) => mettreEnPauseChrono(t.id)}
-              />
-            ))}
-          </div>
-          {topLevel.length === 0 && terminees.length > 0 && (
-            <p className="text-sm font-light text-airzen-secondary">
-              Tout est fait ici, bravo ✨
-            </p>
-          )}
-        </>
       ) : (
         // Mode matrice : voir components/MatricePriorites.tsx (grille 2×2,
         // tâches déplaçables d'une case à l'autre).
